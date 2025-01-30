@@ -1,0 +1,15 @@
+[project]
+name = "memeNexus"
+version = "0.1.0"
+description = "A toolbox for meme trading"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apidance>=0.5.0",
+    "google-genai>=0.7.0",
+    "httpx>=0.25.2",
+    "mplfinance>=0.12.10b0",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.3",
+    "ruff>=0.9.3",
+]
