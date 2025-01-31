@@ -1,9 +1,11 @@
-import httpx
 import logging
+
+import httpx
+
 from pydantic import BaseModel, Field, model_validator
 from tenacity import retry, stop_after_attempt, wait_exponential
-from meme_nexus.exceptions import APIError
 
+from meme_nexus.exceptions import APIError
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,8 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
-from unittest.mock import patch, MagicMock, AsyncMock
 
 from meme_nexus.clients.dexscreener import DexScreenerClient
 from meme_nexus.exceptions import APIError

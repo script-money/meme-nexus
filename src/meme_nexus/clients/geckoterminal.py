@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field, model_validator, ValidationError
-from typing import Literal
-from datetime import datetime
-import httpx
 import logging
-from tenacity import retry, stop_after_attempt, wait_exponential
 
+from datetime import datetime
+from typing import Literal
+
+import httpx
+
+from pydantic import BaseModel, Field, ValidationError, model_validator
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +145,7 @@ class GeckoTerminalClient:
         try:
             return PoolsResponse.model_validate(response.json())
         except ValidationError as e:
-            logger.error(f"Model validation failed: {str(e)}")
+            logger.error(f"Model validation failed: {e!s}")
             raise ValueError("API response structure does not match") from e
 
     @retry(
@@ -174,5 +176,5 @@ class GeckoTerminalClient:
         try:
             return PoolsResponse.model_validate(response.json())
         except ValidationError as e:
-            logger.error(f"Model validation failed: {str(e)}")
+            logger.error(f"Model validation failed: {e!s}")
             raise ValueError("API response structure does not match") from e

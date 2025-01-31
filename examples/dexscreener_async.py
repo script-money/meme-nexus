@@ -10,7 +10,9 @@ This example demonstrates:
 
 import asyncio
 import logging
+
 from datetime import datetime
+
 from meme_nexus.clients.dexscreener import DexScreenerClient
 from meme_nexus.exceptions import APIError
 
@@ -44,9 +46,7 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
                 print(f"24h Change: {pair.priceChange.h24:+.2f}%")
 
             # Print transaction counts
-            print(
-                f"24h Transactions: {pair.txns.h24.buys} buys, {pair.txns.h24.sells} sells"
-            )
+            print(f"24h Txs: {pair.txns.h24.buys} buys, {pair.txns.h24.sells} sells")
 
             # Print token information if available
             if pair.info:
