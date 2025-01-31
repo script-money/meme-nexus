@@ -28,8 +28,8 @@ class PriceChangePercentage(BaseModel):
 class TransactionWindow(BaseModel):
     buys: int
     sells: int
-    buyers: int
-    sellers: int
+    buyers: int | None = None
+    sellers: int | None = None
 
 
 class VolumeUSD(BaseModel):
@@ -96,10 +96,10 @@ class RelationshipWrapper(BaseModel):
 
 
 class PoolRelationships(BaseModel):
-    base_token: RelationshipWrapper
-    quote_token: RelationshipWrapper
-    network: RelationshipWrapper
-    dex: RelationshipWrapper
+    base_token: RelationshipWrapper | None = None
+    quote_token: RelationshipWrapper | None = None
+    network: RelationshipWrapper | None = None
+    dex: RelationshipWrapper | None = None
 
 
 class PoolResponse(BaseModel):
@@ -172,6 +172,41 @@ class GeckoTerminalClient:
         }
 
         response = await self.client.get("/networks/trending_pools", params=params)
+        response.raise_for_status()
+        try:
+            return PoolsResponse.model_validate(response.json())
+        except ValidationError as e:
+            logger.error(f"Model validation failed: {e!s}")
+            raise ValueError("API response structure does not match") from e
+
+    @retry(
+        stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10)
+    )
+    async def search_pools(
+        self,
+        query: str,
+        network: str | None = None,
+        page: int = Field(default=1, ge=1, le=10),
+    ) -> PoolsResponse:
+        """
+        Search for pools on a network
+
+        Args:
+            query: Search query - can be pool address, token address, or token symbol
+            network: (Optional) Network ID from /networks list
+            page: Pagination number (1-10)
+
+        Returns:
+            PoolsResponse: Parsed response data containing matching pools
+        """
+        params = {
+            "query": query,
+            "page": str(page.default if hasattr(page, "default") else page),
+        }
+        if network:
+            params["network"] = network
+
+        response = await self.client.get("/search/pools", params=params)
         response.raise_for_status()
         try:
             return PoolsResponse.model_validate(response.json())
