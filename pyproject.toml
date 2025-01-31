@@ -1,6 +1,6 @@
 [project]
 name = "memeNexus"
-version = "0.1.0-beta.3"
+version = "0.1.0"
 description = "A toolbox for meme trading"
 readme = "README.md"
 requires-python = ">=3.12"
