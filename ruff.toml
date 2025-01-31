@@ -1,0 +1,24 @@
+# ruff.toml
+line-length = 88
+target-version = "py312"
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "RUF", # ruff-specific rules
+]
+ignore = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[lint.isort]
+lines-between-types = 1

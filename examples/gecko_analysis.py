@@ -1,4 +1,5 @@
 import asyncio
+
 from meme_nexus.clients.geckoterminal import GeckoTerminalClient
 
 
@@ -6,9 +7,7 @@ async def analyze_pool(pool):
     """Format and analyze single pool data"""
     print(f"\n{'='*40}")
     print(f"Pool Name: {pool.attributes.name}")
-    print(
-        f"Network: {pool.relationships.network.data.id} | DEX: {pool.relationships.dex.data.id}"
-    )
+    print(f"{pool.relationships.network.data.id} {pool.relationships.dex.data.id}")
     print(f"Created At: {pool.attributes.pool_created_at.strftime('%Y-%m-%d %H:%M')}")
 
     # Price information
@@ -48,7 +47,7 @@ async def main():
             await analyze_pool(pool)
 
     except Exception as e:
-        print(f"❌ Error occurred: {str(e)}")
+        print(f"❌ Error occurred: {e!s}")
 
 
 if __name__ == "__main__":
