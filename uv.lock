@@ -393,11 +393,15 @@ dependencies = [
     { name = "google-genai" },
     { name = "httpx" },
     { name = "mplfinance" },
+    { name = "tenacity" },
+]
+
+[package.dev-dependencies]
+dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
-    { name = "tenacity" },
 ]
 
 [package.metadata]
@@ -406,11 +410,15 @@ requires-dist = [
     { name = "google-genai", specifier = ">=0.7.0" },
     { name = "httpx", specifier = ">=0.25.2" },
     { name = "mplfinance", specifier = ">=0.12.10b0" },
+    { name = "tenacity", specifier = ">=9.0.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
     { name = "pre-commit", specifier = ">=4.1.0" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = ">=0.25.3" },
     { name = "ruff", specifier = ">=0.9.3" },
-    { name = "tenacity", specifier = ">=9.0.0" },
 ]
 
 [[package]]
