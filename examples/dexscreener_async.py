@@ -5,13 +5,21 @@ This example demonstrates:
 1. How to create and use DexScreenerClient
 2. How to make multiple async requests
 3. How to handle different response types
-4. Error handling
+4. Error handling and proper resource cleanup
 """
 
 import asyncio
+import logging
 from datetime import datetime
 from meme_nexus.clients.dexscreener import DexScreenerClient
 from meme_nexus.exceptions import APIError
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 async def print_token_info(client: DexScreenerClient, token_address: str) -> None:
@@ -19,7 +27,7 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
     try:
         response = await client.search_by_token_address(token_address)
         if not response.pairs:
-            print(f"No pairs found for token {token_address}")
+            logger.info(f"No pairs found for token {token_address}")
             return
 
         # Print basic information about each pair
@@ -32,7 +40,7 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
             print(f"Liquidity: ${pair.liquidity.usd:,.2f}")
 
             # Print price changes if available
-            if pair.priceChange.h24 is not None:
+            if pair.priceChange and pair.priceChange.h24 is not None:
                 print(f"24h Change: {pair.priceChange.h24:+.2f}%")
 
             # Print transaction counts
@@ -55,29 +63,34 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
             print(f"{'='*50}\n")
 
     except APIError as e:
-        print(f"Error fetching data for {token_address}: {e}")
+        logger.error(f"API error fetching data for {token_address}: {e}")
     except Exception as e:
-        print(f"Unexpected error for {token_address}: {e}")
+        logger.error(f"Unexpected error for {token_address}: {e}", exc_info=True)
 
 
 async def main():
     # Create client
     client = DexScreenerClient()
+    try:
+        # Example token addresses from different chains
+        tokens = [
+            "2RBko3xoz56aH69isQMUpzZd9NYHahhwC23A5F3Spkin",  # PKIN (Solana)
+            "eayyd-iiaaa-aaaah-adtea-cai",  # iDoge (ICP)
+            "invalid_address",  # Invalid address for testing error handling
+        ]
 
-    # Example token addresses from different chains
-    tokens = [
-        "2RBko3xoz56aH69isQMUpzZd9NYHahhwC23A5F3Spkin",  # PKIN (Solana)
-        "eayyd-iiaaa-aaaah-adtea-cai",  # iDoge (ICP)
-        "invalid_address",  # Invalid address
-    ]
+        logger.info(f"Fetching data at {datetime.now()}")
 
-    print(f"Fetching data at {datetime.now()}\n")
+        # Create tasks for all tokens
+        tasks = [print_token_info(client, token) for token in tokens]
 
-    # Create tasks for all tokens
-    tasks = [print_token_info(client, token) for token in tokens]
+        # Run all tasks concurrently
+        await asyncio.gather(*tasks)
 
-    # Run all tasks concurrently
-    await asyncio.gather(*tasks)
+    finally:
+        # Always close the client to clean up resources
+        await client.close()
+        logger.info("Client closed successfully")
 
 
 if __name__ == "__main__":
