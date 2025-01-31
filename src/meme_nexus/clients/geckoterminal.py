@@ -113,6 +113,33 @@ class PoolsResponse(BaseModel):
     data: list[PoolResponse]
 
 
+class TokenAttributes(BaseModel):
+    address: str
+    name: str
+    symbol: str
+    decimals: int
+    image_url: str | None = None
+    coingecko_coin_id: str | None = None
+    websites: list[str] = Field(default_factory=list)
+    description: str | None = None
+    gt_score: float | None = None
+    discord_url: str | None = None
+    telegram_handle: str | None = None
+    twitter_handle: str | None = None
+    categories: list[str] = Field(default_factory=list)
+    gt_category_ids: list[str] = Field(default_factory=list)
+
+
+class TokenResponse(BaseModel):
+    id: str
+    type: Literal["token"]
+    attributes: TokenAttributes
+
+
+class TokensResponse(BaseModel):
+    data: list[TokenResponse]
+
+
 class GeckoTerminalClient:
     def __init__(self):
         self.client = httpx.AsyncClient(
@@ -213,3 +240,32 @@ class GeckoTerminalClient:
         except ValidationError as e:
             logger.error(f"Model validation failed: {e!s}")
             raise ValueError("API response structure does not match") from e
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+    )
+    async def get_pool_tokens(
+        self,
+        network: str,
+        pool_address: str,
+    ) -> TokensResponse:
+        """
+        Get pool tokens info on a network
+
+        Args:
+            network: Network ID from /networks list (e.g., 'eth', 'solana')
+            pool_address: Pool address
+
+        Returns:
+            TokensResponse: Parsed response containing token information
+        """
+        logger.info(f"Getting tokens for pool {pool_address} on {network}")
+
+        response = await self.client.get(
+            f"networks/{network}/pools/{pool_address}/info"
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        return TokensResponse.model_validate(data)
