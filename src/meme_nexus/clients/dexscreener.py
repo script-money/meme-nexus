@@ -77,7 +77,7 @@ class TimeframePriceChange(BaseModel):
     def parse_numeric_strings(cls, values):
         for field in ["m5", "h1", "h6", "h24"]:
             if isinstance(values.get(field), str):
-                values[field] = float(values[field]) if values[field] else None
+                values[field] = float(values[field]) if values[field] else 0
         return values
 
 
@@ -118,7 +118,7 @@ class Pair(BaseModel):
         numeric_fields = ["priceNative", "priceUsd", "fdv", "marketCap"]
         for field in numeric_fields:
             if isinstance(values.get(field), str):
-                values[field] = float(values[field]) if values[field] else None
+                values[field] = float(values[field]) if values[field] else 0
         return values
 
 
