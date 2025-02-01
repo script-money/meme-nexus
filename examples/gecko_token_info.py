@@ -60,7 +60,7 @@ async def main():
             if hasattr(e, "__cause__") and e.__cause__:
                 print(f"Caused by: {e.__cause__}")
 
-    await client.client.aclose()
+    await client.close()
 
 
 if __name__ == "__main__":
