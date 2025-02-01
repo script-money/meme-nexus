@@ -21,7 +21,7 @@ class PriceChangePercentage(BaseModel):
     def parse_numeric_strings(cls, values):
         for field in values:
             if isinstance(values[field], str):
-                values[field] = float(values[field]) if values[field] else None
+                values[field] = float(values[field]) if values[field] else 0
         return values
 
 
@@ -42,7 +42,7 @@ class VolumeUSD(BaseModel):
     def parse_numeric_strings(cls, values):
         for field in values:
             if isinstance(values[field], str):
-                values[field] = float(values[field]) if values[field] else None
+                values[field] = float(values[field]) if values[field] else 0
         return values
 
 
@@ -82,7 +82,7 @@ class PoolAttributes(BaseModel):
         }
         for field in numeric_fields:
             if field in values and isinstance(values[field], str):
-                values[field] = float(values[field]) if values[field] else None
+                values[field] = float(values[field]) if values[field] else 0
         return values
 
 
