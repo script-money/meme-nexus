@@ -269,3 +269,7 @@ class GeckoTerminalClient:
 
         data = response.json()
         return TokensResponse.model_validate(data)
+
+    async def close(self):
+        """Close the HTTP client session."""
+        await self.client.aclose()
