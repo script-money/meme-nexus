@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from meme_nexus.clients.geckoterminal import PoolsResponse
+from meme_nexus.clients.geckoterminal import (
+    PoolsResponse,
+)
 
 
 def test_valid_full_response():
