@@ -9,6 +9,7 @@ dependencies = [
     "google-genai>=0.7.0",
     "httpx>=0.25.2",
     "mplfinance>=0.12.10b0",
+    "smartmoneyconcepts>=0.0.24",
     "tenacity>=9.0.0",
 ]
 

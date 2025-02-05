@@ -14,3 +14,5 @@ tmp/
 
 # windsurf rules
 .windsurfrules
+
+examples/draw_ohlcv.csv
