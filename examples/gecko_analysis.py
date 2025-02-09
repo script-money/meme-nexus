@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from meme_nexus.clients.geckoterminal import GeckoTerminalClient
 
@@ -23,7 +24,7 @@ async def analyze_pool(pool):
     print(f"Liquidity Reserve: ${pool.attributes.reserve_in_usd:,.2f}")
 
     # Real-time transaction statistics
-    latest_trans = pool.attributes.transactions.get("m5")
+    latest_trans = pool.attributes.transactions.m5
     if latest_trans:
         print("\nLast 5 Minutes Transactions:")
         print(f"Buy Count: {latest_trans.buys}")
@@ -45,6 +46,11 @@ async def main():
         print("\n🚀 Trending Pools Analysis")
         for pool in trending_pools.data[:3]:
             await analyze_pool(pool)
+
+        # Serialize pools example
+        dump_pools = [pool.model_dump() for pool in trending_pools.data[:3]]
+        print(dump_pools)
+        print(json.dumps(dump_pools, indent=2))
 
     except Exception as e:
         print(f"❌ Error occurred: {e!s}")

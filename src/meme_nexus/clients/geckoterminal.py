@@ -23,7 +23,19 @@ from ..exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class PriceChangePercentage(BaseModel):
+class BaseGeckoModel(BaseModel):
+    """Base model for all GeckoTerminal models with dict-like access."""
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def model_dump(self, **kwargs):
+        """Override model_dump to handle datetime serialization."""
+        kwargs.setdefault("mode", "json")
+        return super().model_dump(**kwargs)
+
+
+class PriceChangePercentage(BaseGeckoModel):
     m5: float
     h1: float
     h6: float
@@ -37,14 +49,14 @@ class PriceChangePercentage(BaseModel):
         return values
 
 
-class TransactionWindow(BaseModel):
+class TransactionWindow(BaseGeckoModel):
     buys: int
     sells: int
     buyers: int | None = None
     sellers: int | None = None
 
 
-class VolumeUSD(BaseModel):
+class VolumeUSD(BaseGeckoModel):
     m5: float
     h1: float
     h6: float
@@ -58,7 +70,20 @@ class VolumeUSD(BaseModel):
         return values
 
 
-class PoolAttributes(BaseModel):
+class TransactionsData(BaseGeckoModel):
+    """A model that wraps transactions data with both dict and attribute access."""
+
+    m5: TransactionWindow
+    m15: TransactionWindow
+    m30: TransactionWindow
+    h1: TransactionWindow
+    h24: TransactionWindow
+
+    def __getitem__(self, key: str) -> TransactionWindow:
+        return getattr(self, key)
+
+
+class PoolAttributes(BaseGeckoModel):
     name: str
     address: str
     base_token_price_usd: float = Field(alias="base_token_price_usd")
@@ -76,7 +101,7 @@ class PoolAttributes(BaseModel):
     fdv_usd: float | None = None
     market_cap_usd: float | None = None
     price_change_percentage: PriceChangePercentage
-    transactions: dict[str, TransactionWindow]  # m5, h1 etc
+    transactions: TransactionsData
     volume_usd: VolumeUSD
 
     @model_validator(mode="before")
@@ -95,37 +120,41 @@ class PoolAttributes(BaseModel):
         for field in numeric_fields:
             if field in values and isinstance(values[field], str):
                 values[field] = float(values[field]) if values[field] else 0
+
+        # Convert transactions dict to TransactionsData
+        if "transactions" in values and isinstance(values["transactions"], dict):
+            values["transactions"] = TransactionsData(**values["transactions"])
         return values
 
 
-class RelationshipData(BaseModel):
+class RelationshipData(BaseGeckoModel):
     id: str
     type: Literal["token", "network", "dex"]
 
 
-class RelationshipWrapper(BaseModel):
+class RelationshipWrapper(BaseGeckoModel):
     data: RelationshipData
 
 
-class PoolRelationships(BaseModel):
+class PoolRelationships(BaseGeckoModel):
     base_token: RelationshipWrapper | None = None
     quote_token: RelationshipWrapper | None = None
     network: RelationshipWrapper | None = None
     dex: RelationshipWrapper | None = None
 
 
-class PoolResponse(BaseModel):
+class PoolResponse(BaseGeckoModel):
     id: str
     type: Literal["pool"]
     attributes: PoolAttributes
     relationships: PoolRelationships
 
 
-class PoolsResponse(BaseModel):
+class PoolsResponse(BaseGeckoModel):
     data: list[PoolResponse]
 
 
-class TokenAttributes(BaseModel):
+class TokenAttributes(BaseGeckoModel):
     address: str
     name: str
     symbol: str
@@ -142,17 +171,17 @@ class TokenAttributes(BaseModel):
     gt_category_ids: list[str] = Field(default_factory=list)
 
 
-class TokenResponse(BaseModel):
+class TokenResponse(BaseGeckoModel):
     id: str
     type: Literal["token"]
     attributes: TokenAttributes
 
 
-class TokensResponse(BaseModel):
+class TokensResponse(BaseGeckoModel):
     data: list[TokenResponse]
 
 
-class OHLCVAttributes(BaseModel):
+class OHLCVAttributes(BaseGeckoModel):
     ohlcv_list: list[tuple[int, float, float, float, float, float]]
 
     def get_candles(self) -> list["Candle"]:

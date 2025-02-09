@@ -32,7 +32,7 @@ async def analyze_pool(pool):
     print(f"Price Change (24h): {pool.attributes.price_change_percentage.h24:+.2f}%")
 
     # Transaction analysis
-    h24_trans = pool.attributes.transactions.get("h24", {})
+    h24_trans = pool.attributes.transactions.h24
     if h24_trans:
         print("\n24h Transaction Analysis:")
         total_txns = h24_trans.buys + h24_trans.sells

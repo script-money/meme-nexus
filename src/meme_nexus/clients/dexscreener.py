@@ -10,17 +10,29 @@ from meme_nexus.exceptions import APIError
 logger = logging.getLogger(__name__)
 
 
-class Website(BaseModel):
+class BaseDexModel(BaseModel):
+    """Base model for all DexScreener models with dict-like access."""
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def model_dump(self, **kwargs):
+        """Override model_dump to handle datetime serialization."""
+        kwargs.setdefault("mode", "json")
+        return super().model_dump(**kwargs)
+
+
+class Website(BaseDexModel):
     label: str
     url: str
 
 
-class Social(BaseModel):
+class Social(BaseDexModel):
     type: str
     url: str
 
 
-class Info(BaseModel):
+class Info(BaseDexModel):
     imageUrl: str | None = None
     header: str | None = None
     openGraph: str | None = None
@@ -28,13 +40,13 @@ class Info(BaseModel):
     socials: list[Social] = Field(default_factory=list)
 
 
-class Token(BaseModel):
+class Token(BaseDexModel):
     address: str
     name: str
     symbol: str
 
 
-class Txns(BaseModel):
+class Txns(BaseDexModel):
     buys: int = 0
     sells: int = 0
 
@@ -46,14 +58,14 @@ class Txns(BaseModel):
         return values
 
 
-class TimeframeTxns(BaseModel):
+class TimeframeTxns(BaseDexModel):
     m5: Txns
     h1: Txns
     h6: Txns
     h24: Txns
 
 
-class TimeframeVolume(BaseModel):
+class TimeframeVolume(BaseDexModel):
     m5: float = 0
     h1: float = 0
     h6: float = 0
@@ -67,7 +79,7 @@ class TimeframeVolume(BaseModel):
         return values
 
 
-class TimeframePriceChange(BaseModel):
+class TimeframePriceChange(BaseDexModel):
     m5: float | None = None
     h1: float | None = None
     h6: float | None = None
@@ -81,7 +93,7 @@ class TimeframePriceChange(BaseModel):
         return values
 
 
-class Liquidity(BaseModel):
+class Liquidity(BaseDexModel):
     usd: float
     base: float
     quote: float
@@ -94,7 +106,7 @@ class Liquidity(BaseModel):
         return values
 
 
-class Pair(BaseModel):
+class Pair(BaseDexModel):
     chainId: str
     dexId: str
     url: str
@@ -122,7 +134,7 @@ class Pair(BaseModel):
         return values
 
 
-class DexScreenerResponse(BaseModel):
+class DexScreenerResponse(BaseDexModel):
     schemaVersion: str = "unknown"
     pairs: list[Pair] = Field(default_factory=list)
 
