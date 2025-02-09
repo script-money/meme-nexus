@@ -107,7 +107,7 @@ class Pair(BaseModel):
     txns: TimeframeTxns
     volume: TimeframeVolume
     priceChange: TimeframePriceChange
-    liquidity: Liquidity
+    liquidity: Liquidity | None = None
     fdv: float | None = None
     marketCap: float | None = None
     pairCreatedAt: int | None = None
