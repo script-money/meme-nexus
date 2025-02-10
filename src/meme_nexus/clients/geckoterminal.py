@@ -88,17 +88,21 @@ class PoolAttributes(BaseGeckoModel):
     address: str
     base_token_price_usd: float = Field(alias="base_token_price_usd")
     quote_token_price_usd: float = Field(alias="quote_token_price_usd")
-    base_token_price_native_currency: float = Field(
+    base_token_price_native_currency: float | None = Field(
         alias="base_token_price_native_currency"
     )
-    quote_token_price_native_currency: float = Field(
+    quote_token_price_native_currency: float | None = Field(
         alias="quote_token_price_native_currency"
     )
-    base_token_price_quote_token: float = Field(alias="base_token_price_quote_token")
-    quote_token_price_base_token: float = Field(alias="quote_token_price_base_token")
+    base_token_price_quote_token: float | None = Field(
+        alias="base_token_price_quote_token"
+    )
+    quote_token_price_base_token: float | None = Field(
+        alias="quote_token_price_base_token"
+    )
     reserve_in_usd: float = Field(alias="reserve_in_usd")
     pool_created_at: datetime
-    fdv_usd: float | None = None
+    fdv_usd: float
     market_cap_usd: float | None = None
     price_change_percentage: PriceChangePercentage
     transactions: TransactionsData
@@ -241,9 +245,11 @@ class GeckoTerminalClient:
         response.raise_for_status()
 
         try:
-            return PoolsResponse.model_validate(response.json())
+            json_data = response.json()
+            return PoolsResponse.model_validate(json_data)
         except ValidationError as e:
             logger.error(f"Model validation failed: {e!s}")
+            logger.error(f"Raw JSON data: {json_data}")
             raise ValueError("API response structure does not match") from e
 
     @retry(
@@ -272,9 +278,11 @@ class GeckoTerminalClient:
         response = await self.client.get("/networks/trending_pools", params=params)
         response.raise_for_status()
         try:
-            return PoolsResponse.model_validate(response.json())
+            json_data = response.json()
+            return PoolsResponse.model_validate(json_data)
         except ValidationError as e:
             logger.error(f"Model validation failed: {e!s}")
+            logger.error(f"Raw JSON data: {json_data}")
             raise ValueError("API response structure does not match") from e
 
     @retry(
@@ -307,9 +315,11 @@ class GeckoTerminalClient:
         response = await self.client.get("/search/pools", params=params)
         response.raise_for_status()
         try:
-            return PoolsResponse.model_validate(response.json())
+            json_data = response.json()
+            return PoolsResponse.model_validate(json_data)
         except ValidationError as e:
             logger.error(f"Model validation failed: {e!s}")
+            logger.error(f"Raw JSON data: {json_data}")
             raise ValueError("API response structure does not match") from e
 
     @retry(
@@ -435,6 +445,7 @@ class GeckoTerminalClient:
             return attributes.get_candles()
         except ValidationError as e:
             logger.error(f"Model validation failed: {e!s}")
+            logger.error(f"Raw JSON data: {response_json}")
             raise InvalidParametersError("API response structure does not match") from e
 
     async def get_ohlcv_history(
