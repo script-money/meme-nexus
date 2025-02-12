@@ -86,8 +86,8 @@ class TransactionsData(BaseGeckoModel):
 class PoolAttributes(BaseGeckoModel):
     name: str
     address: str
-    base_token_price_usd: float = Field(alias="base_token_price_usd")
-    quote_token_price_usd: float = Field(alias="quote_token_price_usd")
+    base_token_price_usd: float | None = Field(alias="base_token_price_usd")
+    quote_token_price_usd: float | None = Field(alias="quote_token_price_usd")
     base_token_price_native_currency: float | None = Field(
         alias="base_token_price_native_currency"
     )
@@ -100,9 +100,9 @@ class PoolAttributes(BaseGeckoModel):
     quote_token_price_base_token: float | None = Field(
         alias="quote_token_price_base_token"
     )
-    reserve_in_usd: float = Field(alias="reserve_in_usd")
+    reserve_in_usd: float | None = Field(alias="reserve_in_usd")
     pool_created_at: datetime
-    fdv_usd: float
+    fdv_usd: float | None = None
     market_cap_usd: float | None = None
     price_change_percentage: PriceChangePercentage
     transactions: TransactionsData
