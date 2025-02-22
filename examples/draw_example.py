@@ -16,10 +16,10 @@ async def main():
             ohlcv = pd.read_csv(csv_path, index_col=0)
         else:
             ohlcv = await client.get_ohlcv(
-                "solana",
-                "AJCNdUWWJV32fX9FrSpdSdezBTuXmYgPUwFHFKgxYcLZ",
-                "hour",
-                aggregate=1,
+                "bsc",
+                "0x1d519280255d5d90f469f79dc8f5abe05f64429f",
+                "minute",
+                aggregate=5,
                 limit=1000,
             )
 
@@ -32,9 +32,9 @@ async def main():
 
         img_path, mime_type, base64 = plot_candlestick(
             ohlcv,
-            "Daige",
-            "h",
-            aggregate=1,
+            "SHELL",
+            "m",
+            aggregate=5,
             is_save_file=True,
             is_draw_swingpoint=True,
             is_draw_orderblock=True,
