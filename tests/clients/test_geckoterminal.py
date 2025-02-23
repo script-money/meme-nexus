@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from meme_nexus.clients.geckoterminal import (
     PoolsResponse,
@@ -82,3 +82,114 @@ def test_valid_full_response():
         pool.relationships.quote_token.data.id
         == "solana_So11111111111111111111111111111111111111112"
     )
+
+
+def test_none_fdv_response():
+    """Test response with None fdv_usd value"""
+    test_data = {
+        "data": [
+            {
+                "id": "solana_6t7waBb41LrAVGHSWPeqPigjX1aMafKapHRJtR6n3wSE",
+                "type": "pool",
+                "attributes": {
+                    "base_token_price_usd": 0.00528154070563412,
+                    "base_token_price_native_currency": 3.01938568087539e-05,
+                    "quote_token_price_usd": 171.03,
+                    "quote_token_price_native_currency": 1.0,
+                    "base_token_price_quote_token": 3.019e-05,
+                    "quote_token_price_base_token": 33119.32,
+                    "address": "6t7waBb41LrAVGHSWPeqPigjX1aMafKapHRJtR6n3wSE",
+                    "name": "AKIDS / SOL",
+                    "pool_created_at": "2025-02-18T08:40:13Z",
+                    "fdv_usd": None,
+                    "market_cap_usd": None,
+                    "price_change_percentage": {
+                        "m5": -0.58,
+                        "h1": 11.01,
+                        "h6": 35.75,
+                        "h24": 56.53,
+                    },
+                    "transactions": {
+                        "m5": {"buys": 15, "sells": 10, "buyers": 15, "sellers": 10},
+                        "m15": {"buys": 78, "sells": 59, "buyers": 68, "sellers": 54},
+                        "m30": {
+                            "buys": 207,
+                            "sells": 125,
+                            "buyers": 151,
+                            "sellers": 98,
+                        },
+                        "h1": {
+                            "buys": 336,
+                            "sells": 257,
+                            "buyers": 211,
+                            "sellers": 189,
+                        },
+                        "h24": {
+                            "buys": 1726,
+                            "sells": 1232,
+                            "buyers": 870,
+                            "sellers": 700,
+                        },
+                    },
+                    "volume_usd": {
+                        "m5": 5860.9944057729,
+                        "h1": 154113.858216485,
+                        "h6": 319179.5270969,
+                        "h24": 476349.366234444,
+                    },
+                    "reserve_in_usd": 214239.0071,
+                },
+                "relationships": {
+                    "base_token": {
+                        "data": {
+                            "id": "solana_2z5VijfstyHnDsvGwMExtvjTgTB1TT3JSf29PRe9MvNG",
+                            "type": "token",
+                        }
+                    },
+                    "quote_token": {
+                        "data": {
+                            "id": "solana_So11111111111111111111111111111111111111112",
+                            "type": "token",
+                        }
+                    },
+                    "network": {
+                        "data": {
+                            "id": "solana",
+                            "type": "network",
+                        }
+                    },
+                    "dex": {
+                        "data": {
+                            "id": "meteora",
+                            "type": "dex",
+                        }
+                    },
+                },
+            },
+        ]
+    }
+
+    # 测试解析
+    parsed = PoolsResponse(**test_data)
+    pool = parsed.data[0]
+
+    # 验证关键字段
+    assert pool.attributes.fdv_usd is None
+    assert pool.attributes.market_cap_usd is None
+    assert pool.attributes.base_token_price_usd == 0.00528154070563412
+    assert pool.attributes.pool_created_at == datetime(
+        2025, 2, 18, 8, 40, 13, tzinfo=UTC
+    )
+    assert pool.attributes.name == "AKIDS / SOL"
+
+    # 验证价格变化百分比
+    assert pool.attributes.price_change_percentage.m5 == -0.58
+    assert pool.attributes.price_change_percentage.h24 == 56.53
+
+    # 验证交易数据
+    assert pool.attributes.transactions.m5.buys == 15
+    assert pool.attributes.transactions.h24.sells == 1232
+
+    # 验证关系数据
+    assert pool.relationships.dex.data.id == "meteora"
+    assert pool.relationships.network.data.id == "solana"

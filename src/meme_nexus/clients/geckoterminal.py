@@ -86,24 +86,16 @@ class TransactionsData(BaseGeckoModel):
 class PoolAttributes(BaseGeckoModel):
     name: str
     address: str
-    base_token_price_usd: float | None = Field(alias="base_token_price_usd")
-    quote_token_price_usd: float | None = Field(alias="quote_token_price_usd")
-    base_token_price_native_currency: float | None = Field(
-        alias="base_token_price_native_currency"
-    )
-    quote_token_price_native_currency: float | None = Field(
-        alias="quote_token_price_native_currency"
-    )
-    base_token_price_quote_token: float | None = Field(
-        alias="base_token_price_quote_token"
-    )
-    quote_token_price_base_token: float | None = Field(
-        alias="quote_token_price_base_token"
-    )
-    reserve_in_usd: float | None = Field(alias="reserve_in_usd")
+    base_token_price_usd: float | None = Field(default=None)
+    quote_token_price_usd: float | None = Field(default=None)
+    base_token_price_native_currency: float | None = Field(default=None)
+    quote_token_price_native_currency: float | None = Field(default=None)
+    base_token_price_quote_token: float | None = Field(default=None)
+    quote_token_price_base_token: float | None = Field(default=None)
+    reserve_in_usd: float | None = Field(default=None)
     pool_created_at: datetime
-    fdv_usd: float | None = None
-    market_cap_usd: float | None = None
+    fdv_usd: float | None = Field(default=None)
+    market_cap_usd: float | None = Field(default=None)
     price_change_percentage: PriceChangePercentage
     transactions: TransactionsData
     volume_usd: VolumeUSD
@@ -123,8 +115,7 @@ class PoolAttributes(BaseGeckoModel):
         }
         for field in numeric_fields:
             if field in values and isinstance(values[field], str):
-                values[field] = float(values[field]) if values[field] else 0
-
+                values[field] = float(values[field]) if values[field] else None
         # Convert transactions dict to TransactionsData
         if "transactions" in values and isinstance(values["transactions"], dict):
             values["transactions"] = TransactionsData(**values["transactions"])
