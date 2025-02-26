@@ -27,6 +27,8 @@ def plot_candlestick(
     is_draw_swingpoint=False,
     is_draw_orderblock=False,
     is_draw_liquidity=False,
+    is_draw_fvg=False,
+    is_draw_choch=False,
     dark_mode=True,
 ) -> str:
     green = "#0C8E76"
@@ -86,6 +88,18 @@ def plot_candlestick(
 
     swing_length = max(6, round(base_length * (aggregate**0.5)))
     swings = smc.swing_highs_lows(ohlc, swing_length=swing_length)
+
+    # If swings is not None and not empty, set the last swing_length points to NaN
+    if swings is not None and not swings.empty:
+        last_n_indices = (
+            swings.index[-swing_length:] if len(swings) > swing_length else swings.index
+        )
+        swings.loc[last_n_indices, "HighLow"] = float("nan")
+
+        first_n_indices = (
+            swings.index[:swing_length] if len(swings) > swing_length else swings.index
+        )
+        swings.loc[first_n_indices, "HighLow"] = float("nan")
 
     # Create empty series for swing points
     swing_highs = pd.Series(False, index=ohlc.index)
@@ -257,7 +271,9 @@ def plot_candlestick(
     )
 
     # Draw order blocks & Liquidity
-    if swings is not None and (is_draw_orderblock or is_draw_liquidity):
+    if swings is not None and (
+        is_draw_orderblock or is_draw_liquidity or is_draw_fvg or is_draw_choch
+    ):
         ob = smc.ob(ohlc, swing_highs_lows=swings, close_mitigation=False)
 
         if is_draw_orderblock and not ob.empty:
@@ -278,6 +294,14 @@ def plot_candlestick(
                         zorder=4,
                         edgecolor="none",
                     )
+                    ax.text(
+                        idx + 1,
+                        (row["Top"] + row["Bottom"]) / 2,
+                        "OB",
+                        fontsize=4,
+                        color=green,
+                        alpha=0.8,
+                    )
                 elif row["OB"] == -1.0 and future_high < row["Bottom"]:
                     ax.fill_between(
                         [idx, idx + percentage_strength_width * multiplier],
@@ -287,6 +311,14 @@ def plot_candlestick(
                         alpha=0.3,
                         zorder=4,
                         edgecolor="none",
+                    )
+                    ax.text(
+                        idx + 1,
+                        (row["Bottom"] + row["Top"]) / 2,
+                        "OB",
+                        fontsize=4,
+                        color=red,
+                        alpha=0.8,
                     )
 
         if is_draw_liquidity:
@@ -306,6 +338,130 @@ def plot_candlestick(
                     linewidth=0.8,
                     alpha=alpha,
                 )
+
+        # Draw FVGs
+        if is_draw_fvg:
+            fvgs = smc.fvg(ohlc, join_consecutive=False)
+            for _, fvg in fvgs.iterrows():
+                if (
+                    pd.notna(fvg["Top"])
+                    and pd.notna(fvg["Bottom"])
+                    and fvg["Top"] / fvg["Bottom"] > 1.01  # filter small FVGs
+                ):
+                    is_mitigated = fvg["MitigatedIndex"] != 0.0
+                    alpha = 0.15 if is_mitigated else 0.75
+
+                    if fvg["FVG"] == 1.0:
+                        ax.vlines(
+                            x=_,
+                            ymin=fvg["Bottom"],
+                            ymax=fvg["Top"],
+                            colors=green,
+                            alpha=alpha,
+                            linewidth=4,
+                        )
+                        ax.text(
+                            _ + 1,
+                            (fvg["Top"] + fvg["Bottom"]) / 2,
+                            "FVG",
+                            fontsize=4,
+                            ha="left",
+                            va="center",
+                            color=green,
+                            alpha=alpha,
+                        )
+                    elif fvg["FVG"] == -1.0:
+                        ax.vlines(
+                            x=_,
+                            ymin=fvg["Bottom"],
+                            ymax=fvg["Top"],
+                            colors=red,
+                            alpha=alpha,
+                            linewidth=4,
+                        )
+                        ax.text(
+                            _ + 1,
+                            (fvg["Top"] + fvg["Bottom"]) / 2,
+                            "FVG",
+                            fontsize=4,
+                            ha="left",
+                            va="center",
+                            color=red,
+                            alpha=alpha,
+                        )
+
+        # Draw CHOCH and BOS
+        if is_draw_choch:
+            # Get BOS/CHOCH data
+            bos_choch = smc.bos_choch(ohlc, swing_highs_lows=swings, close_break=True)
+
+            if not bos_choch.empty:
+                valid_rows = bos_choch.dropna(subset=["BOS", "CHOCH"], how="all")
+
+                for idx, row in valid_rows.iterrows():
+                    if pd.isna(row["BrokenIndex"]):
+                        continue
+
+                    row_index = int(row["BrokenIndex"])
+
+                    if row_index >= len(ohlc):
+                        continue
+
+                    if not pd.isna(row["CHOCH"]):
+                        direction = "bullish" if row["CHOCH"] == 1.0 else "bearish"
+                        color = green if direction == "bullish" else red
+
+                        swing_index = idx
+
+                        if swing_index >= len(ohlc) or row_index >= len(ohlc):
+                            continue
+
+                        ax.hlines(
+                            y=row["Level"],
+                            xmin=swing_index,
+                            xmax=row_index,
+                            color=color,
+                            linewidth=0.5,
+                            linestyle="-",
+                        )
+
+                        ax.text(
+                            swing_index + (row_index - swing_index) / 2,
+                            row["Level"],
+                            "CHOCH",
+                            fontsize=4,
+                            ha="center",
+                            va=("bottom" if direction == "bullish" else "top"),
+                            color=color,
+                        )
+
+                    if not pd.isna(row["BOS"]):
+                        direction = "bullish" if row["BOS"] == 1.0 else "bearish"
+                        color = green if direction == "bullish" else red
+
+                        swing_index = idx
+
+                        if swing_index >= len(ohlc) or row_index >= len(ohlc):
+                            continue
+
+                        ax.hlines(
+                            y=row["Level"],
+                            xmin=swing_index,
+                            xmax=row_index,
+                            color=color,
+                            linewidth=0.5,
+                            linestyle="-",
+                        )
+
+                        ax.text(
+                            swing_index + (row_index - swing_index) / 2,
+                            row["Level"],
+                            "BOS",
+                            fontsize=4,
+                            ha="center",
+                            va=("bottom" if direction == "bullish" else "top"),
+                            color=color,
+                        )
 
     # Save the chart in WebP format
     last_timestamp = datetime.fromtimestamp(ohlc.index[-1].timestamp())  # local time
