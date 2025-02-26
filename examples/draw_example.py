@@ -15,11 +15,12 @@ async def main():
         if use_cache:
             ohlcv = pd.read_csv(csv_path, index_col=0)
         else:
+            timeframe, aggregate = "minute", 15
             ohlcv = await client.get_ohlcv(
                 "bsc",
                 "0x1d519280255d5d90f469f79dc8f5abe05f64429f",
-                "minute",
-                aggregate=5,
+                timeframe,
+                aggregate=aggregate,
                 limit=1000,
             )
 
@@ -33,13 +34,15 @@ async def main():
         img_path, mime_type, base64 = plot_candlestick(
             ohlcv,
             "SHELL",
-            "m",
-            aggregate=5,
+            timeframe,
+            aggregate=aggregate,
             is_save_file=True,
             is_draw_swingpoint=True,
             is_draw_orderblock=True,
             is_draw_liquidity=True,
-            dark_mode=False,
+            is_draw_fvg=True,
+            is_draw_choch=True,
+            dark_mode=True,
         )
         print(img_path)
         print(mime_type)
