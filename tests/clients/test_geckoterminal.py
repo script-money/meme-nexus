@@ -193,3 +193,66 @@ def test_none_fdv_response():
     # 验证关系数据
     assert pool.relationships.dex.data.id == "meteora"
     assert pool.relationships.network.data.id == "solana"
+
+
+def test_missing_fdv_field():
+    """Test response with completely missing fdv_usd field"""
+    test_data = {
+        "data": [
+            {
+                "id": "solana_test_pool",
+                "type": "pool",
+                "attributes": {
+                    "base_token_price_usd": "0.000123456",
+                    "quote_token_price_usd": "100.0",
+                    "address": "test_address",
+                    "name": "TEST / SOL",
+                    "pool_created_at": "2025-02-20T10:00:00Z",
+                    "price_change_percentage": {
+                        "m5": "0.5",
+                        "h1": "1.0",
+                        "h6": "2.0",
+                        "h24": "3.0",
+                    },
+                    "transactions": {
+                        "m5": {"buys": 10, "sells": 5},
+                        "m15": {"buys": 20, "sells": 10},
+                        "m30": {"buys": 30, "sells": 15},
+                        "h1": {"buys": 40, "sells": 20},
+                        "h24": {"buys": 100, "sells": 50},
+                    },
+                    "volume_usd": {
+                        "m5": "100",
+                        "h1": "500",
+                        "h6": "1000",
+                        "h24": "5000",
+                    },
+                    "reserve_in_usd": "10000",
+                },
+                "relationships": {
+                    "base_token": {
+                        "data": {
+                            "id": "solana_test_token",
+                            "type": "token",
+                        }
+                    },
+                    "quote_token": {
+                        "data": {
+                            "id": "solana_sol_token",
+                            "type": "token",
+                        }
+                    },
+                    "network": {"data": {"id": "solana", "type": "network"}},
+                    "dex": {"data": {"id": "test_dex", "type": "dex"}},
+                },
+            },
+        ]
+    }
+
+    # 测试解析 - 应该不会抛出异常
+    parsed = PoolsResponse(**test_data)
+    pool = parsed.data[0]
+
+    # 验证 fdv_usd 字段应为 None
+    assert pool.attributes.fdv_usd is None
+    assert pool.attributes.base_token_price_usd == 0.000123456

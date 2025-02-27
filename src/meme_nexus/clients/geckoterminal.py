@@ -114,8 +114,9 @@ class PoolAttributes(BaseGeckoModel):
             "market_cap_usd",
         }
         for field in numeric_fields:
-            if field in values and isinstance(values[field], str):
-                values[field] = float(values[field]) if values[field] else None
+            if field in values and values[field] is not None:
+                if isinstance(values[field], str):
+                    values[field] = float(values[field]) if values[field] else None
         # Convert transactions dict to TransactionsData
         if "transactions" in values and isinstance(values["transactions"], dict):
             values["transactions"] = TransactionsData(**values["transactions"])
