@@ -1,41 +1,42 @@
 import asyncio
 
+import ccxt.async_support as ccxt
 import pandas as pd
 
-from meme_nexus.clients.geckoterminal import GeckoTerminalClient
 from meme_nexus.utils.draw import plot_candlestick
 
 
 async def main():
-    client = GeckoTerminalClient()
+    exchange = ccxt.binanceusdm()
+
     try:
-        symbol = "SHELL"
-        timeframe = "minute"
-        aggregate = 15
-        csv_path = "examples/draw_ohlcv.csv"
-        use_cache = True
+        symbol = "BTC"
+        ticker = f"{symbol}/USDT:USDT"
+        aggregate = 4
+        timeframe = "h"
+        use_cache = False
+
+        csv_path = "examples/draw_cex_ohlcv.csv"
 
         if use_cache:
             ohlcv = pd.read_csv(csv_path, index_col=0)
         else:
-            ohlcv = await client.get_ohlcv(
-                "bsc",
-                "0x1d519280255d5d90f469f79dc8f5abe05f64429f",
-                timeframe,
-                aggregate=aggregate,
-                limit=1000,
+            ohlcv = await exchange.fetch_ohlcv(
+                ticker, f"{aggregate}{timeframe}", since=None, limit=1000
             )
 
             ohlcv = pd.DataFrame(
-                [candle.to_list() for candle in ohlcv],
+                ohlcv,
                 columns=["timestamp", "open", "high", "low", "close", "volume"],
-            ).set_index("timestamp")
+            )
+            ohlcv["timestamp"] = ohlcv["timestamp"] // 1000  # Convert ms to s
+            ohlcv = ohlcv.set_index("timestamp")
 
             ohlcv.to_csv(csv_path)
 
         img_path, mime_type, base64 = plot_candlestick(
             ohlcv,
-            symbol,
+            ticker,
             timeframe,
             aggregate=aggregate,
             is_save_file=True,
@@ -45,14 +46,15 @@ async def main():
             is_draw_fvg=True,
             is_draw_choch=True,
             is_draw_rainbow=True,
-            dark_mode=True,
+            dark_mode=False,
         )
         print(img_path)
         print(mime_type)
         print(base64[:100])
-
+    except ccxt.RateLimitExceeded:
+        await exchange.sleep(1000)  # sleep 1 second
     finally:
-        await client.close()
+        await exchange.close()
 
 
 if __name__ == "__main__":

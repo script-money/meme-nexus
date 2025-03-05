@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "apidance>=0.5.0",
+    "ccxt>=4.4.64",
     "google-genai>=0.7.0",
     "httpx>=0.25.2",
     "mplfinance>=0.12.10b0",
