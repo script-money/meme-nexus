@@ -8,6 +8,7 @@ from typing import Literal
 
 import matplotlib.pyplot as plt
 import mplfinance as mpf
+import numpy as np
 import pandas as pd
 
 from PIL import Image
@@ -29,6 +30,7 @@ def plot_candlestick(
     is_draw_liquidity=False,
     is_draw_fvg=False,
     is_draw_choch=False,
+    is_draw_rainbow=False,
     dark_mode=True,
 ) -> str:
     green = "#0C8E76"
@@ -119,6 +121,186 @@ def plot_candlestick(
         swing_lows.loc[swings_filtered[swings_filtered["HighLow"] == -1.0].index] = True
 
     addplots = [volume_overlay]
+
+    # Rainbow colors
+    orange = "#b6420d"
+    yellow = "#706b2b"
+    lime_green = "#3a7d44"
+    blue = "#0ea0a4"
+    cyan = "#1b66af"
+
+    # Calculate Rainbow indicator components if enabled
+    if is_draw_rainbow:
+        # Ensure sufficient data for calculations
+        min_required_data = 200  # Based on RMA200 requirement
+        if len(ohlc) < min_required_data:
+            warnings.warn(
+                "Insufficient data to calculate Rainbow indicator.",
+                stacklevel=2,
+            )
+            is_draw_rainbow = False
+        else:
+            # Calculate hl2 (high-low average)
+            ohlc["hl2"] = (ohlc["high"] + ohlc["low"]) / 2
+
+            # Calculate MA100 of hl2
+            ma_period = 100
+            ohlc["ma100"] = ohlc["hl2"].rolling(window=ma_period).mean()
+
+            # Calculate RMA200 of ATR
+            atr_period = 200
+            # Calculate True Range
+            tr1 = ohlc["high"] - ohlc["low"]
+            tr2 = abs(ohlc["high"] - ohlc["close"].shift(1))
+            tr3 = abs(ohlc["low"] - ohlc["close"].shift(1))
+            ohlc["tr"] = np.maximum(np.maximum(tr1, tr2), tr3)
+
+            # Calculate RMA of TR
+            alpha = 1.0 / atr_period
+            ohlc["atr_rma200"] = ohlc["tr"].ewm(alpha=alpha, adjust=False).mean()
+
+            # Calculate Rainbow Lines
+            ohlc["orange_line"] = ohlc["ma100"] + 8 * ohlc["atr_rma200"]
+            ohlc["yellow_line"] = ohlc["ma100"] + 4 * ohlc["atr_rma200"]
+            ohlc["green_line"] = ohlc["ma100"]
+            ohlc["blue_line"] = ohlc["ma100"] - 4 * ohlc["atr_rma200"]
+            ohlc["cyan_line"] = ohlc["ma100"] - 8 * ohlc["atr_rma200"]
+
+            # Initialize trend states
+            ohlc["bull_trend"] = False
+            ohlc["bear_trend"] = False
+
+            # Detect trend change points
+            # Initialize trend change columns
+            ohlc["bull_start"] = False
+            ohlc["bull_end"] = False
+            ohlc["bear_start"] = False
+            ohlc["bear_end"] = False
+
+            # Detect trend changes starting from the second data point
+            for i in range(1, len(ohlc)):
+                # Previous state
+                prev_bull = ohlc.iloc[i - 1]["bull_trend"]
+                prev_bear = ohlc.iloc[i - 1]["bear_trend"]
+
+                # Current price vs indicator relationships
+                price_above_orange = ohlc.iloc[i]["close"] > ohlc.iloc[i]["orange_line"]
+                price_below_green = ohlc.iloc[i]["close"] < ohlc.iloc[i]["green_line"]
+                price_below_cyan = ohlc.iloc[i]["close"] < ohlc.iloc[i]["cyan_line"]
+                price_above_green = ohlc.iloc[i]["close"] > ohlc.iloc[i]["green_line"]
+
+                # Previous price vs indicator relationships
+                prev_price_above_orange = (
+                    ohlc.iloc[i - 1]["close"] > ohlc.iloc[i - 1]["orange_line"]
+                )
+                prev_price_below_green = (
+                    ohlc.iloc[i - 1]["close"] < ohlc.iloc[i - 1]["green_line"]
+                )
+                prev_price_below_cyan = (
+                    ohlc.iloc[i - 1]["close"] < ohlc.iloc[i - 1]["cyan_line"]
+                )
+                prev_price_above_green = (
+                    ohlc.iloc[i - 1]["close"] > ohlc.iloc[i - 1]["green_line"]
+                )
+
+                # Update trend states
+                if not prev_bull and price_above_orange and not prev_price_above_orange:
+                    # Bullish trend starts
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = True
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = False
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_start")] = True
+                elif prev_bull and price_below_green and not prev_price_below_green:
+                    # Bullish trend ends
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = False
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_end")] = True
+                elif prev_bull:
+                    # Maintain bullish trend
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = True
+
+                if not prev_bear and price_below_cyan and not prev_price_below_cyan:
+                    # Bearish trend starts
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = True
+                    ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = False
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_start")] = True
+                elif prev_bear and price_above_green and not prev_price_above_green:
+                    # Bearish trend ends
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = False
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_end")] = True
+                elif prev_bear:
+                    # Maintain bearish trend
+                    ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = True
+
+            # Add Rainbow lines to the plot
+            orange_line_plot = mpf.make_addplot(
+                ohlc["orange_line"], color=orange, width=0.5, panel=0
+            )
+            yellow_line_plot = mpf.make_addplot(
+                ohlc["yellow_line"], color=yellow, width=0.5, panel=0
+            )
+            green_line_plot = mpf.make_addplot(
+                ohlc["green_line"], color=lime_green, width=0.5, panel=0
+            )
+            blue_line_plot = mpf.make_addplot(
+                ohlc["blue_line"], color=blue, width=0.5, panel=0
+            )
+            cyan_line_plot = mpf.make_addplot(
+                ohlc["cyan_line"], color=cyan, width=0.5, panel=0
+            )
+
+            addplots.extend(
+                [
+                    orange_line_plot,
+                    yellow_line_plot,
+                    green_line_plot,
+                    blue_line_plot,
+                    cyan_line_plot,
+                ]
+            )
+
+            # Add trend signals - ensure marker data is not empty
+            if ohlc["bull_start"].any():
+                bull_start_markers = mpf.make_addplot(
+                    ohlc["close"].where(ohlc["bull_start"]),
+                    type="scatter",
+                    marker="^",  # Up arrow
+                    markersize=60,
+                    color="lime",
+                    panel=0,
+                )
+                addplots.append(bull_start_markers)
+
+            if ohlc["bull_end"].any():
+                bull_end_markers = mpf.make_addplot(
+                    ohlc["close"].where(ohlc["bull_end"]),
+                    type="scatter",
+                    marker="x",  # X mark
+                    markersize=60,
+                    color="lime",
+                    panel=0,
+                )
+                addplots.append(bull_end_markers)
+
+            if ohlc["bear_start"].any():
+                bear_start_markers = mpf.make_addplot(
+                    ohlc["close"].where(ohlc["bear_start"]),
+                    type="scatter",
+                    marker="v",  # Down arrow
+                    markersize=60,
+                    color="red",
+                    panel=0,
+                )
+                addplots.append(bear_start_markers)
+
+            if ohlc["bear_end"].any():
+                bear_end_markers = mpf.make_addplot(
+                    ohlc["close"].where(ohlc["bear_end"]),
+                    type="scatter",
+                    marker="x",  # X mark
+                    markersize=60,
+                    color="red",
+                    panel=0,
+                )
+                addplots.append(bear_end_markers)
 
     if is_draw_swingpoint:
         offset = 0.015
@@ -428,7 +610,7 @@ def plot_candlestick(
                         ax.text(
                             swing_index + (row_index - swing_index) / 2,
                             row["Level"],
-                            "CHOCH",
+                            "CHoCH",
                             fontsize=4,
                             ha="center",
                             va=("bottom" if direction == "bullish" else "top"),
