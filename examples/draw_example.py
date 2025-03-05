@@ -42,6 +42,7 @@ async def main():
             is_draw_liquidity=True,
             is_draw_fvg=True,
             is_draw_choch=True,
+            is_draw_rainbow=True,
             dark_mode=True,
         )
         print(img_path)
