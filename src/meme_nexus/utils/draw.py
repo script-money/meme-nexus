@@ -367,7 +367,7 @@ def plot_candlestick(
             if swing_highs[idx]:
                 price = ohlc.loc[idx, "high"]
                 ax.annotate(
-                    format_number(price, precision=4),
+                    format_number(price, precision=4, is_format_k=False),
                     (i, price * (1 + offset)),
                     xytext=(0, 5),
                     textcoords="offset points",
@@ -380,7 +380,7 @@ def plot_candlestick(
                 price = ohlc.loc[idx, "low"]
 
                 ax.annotate(
-                    format_number(price, precision=4),
+                    format_number(price, precision=4, is_format_k=False),
                     (i, price * (1 - offset)),
                     xytext=(0, -5),
                     textcoords="offset points",
@@ -394,7 +394,7 @@ def plot_candlestick(
     ax.text(
         0.5,
         1.05,
-        f"{symbol} ({aggregate} {timeframe}) O:{ohlc['open'].iloc[-1]:.6f} H:{ohlc['high'].iloc[-1]:.6f} L:{ohlc['low'].iloc[-1]:.6f} C:{ohlc['close'].iloc[-1]:.6f}",  # noqa: E501
+        f"{symbol} ({aggregate} {timeframe}) O:{ohlc['open'].iloc[-1]:.6g} H:{ohlc['high'].iloc[-1]:.6g} L:{ohlc['low'].iloc[-1]:.6g} C:{ohlc['close'].iloc[-1]:.6g}",  # noqa: E501
         transform=ax.transAxes,
         va="top",
         ha="center",
@@ -647,6 +647,8 @@ def plot_candlestick(
 
     # Save the chart in WebP format
     last_timestamp = datetime.fromtimestamp(ohlc.index[-1].timestamp())  # local time
+    if "/" in symbol:
+        symbol = symbol.split("/")[0]
     webp_filename = f"{symbol}-{last_timestamp}-{aggregate}{timeframe}.webp"
 
     buffered = BytesIO()
