@@ -303,16 +303,35 @@ def plot_candlestick(
                 addplots.append(bear_end_markers)
 
     if is_draw_swingpoint:
-        offset = 0.015
+        price_range = ohlc["high"].max() - ohlc["low"].min()
+        dynamic_offset_factor = 0.01
+        dynamic_offset = price_range * dynamic_offset_factor
+
+        # actual offset
+        high_offsets = pd.Series(
+            [
+                dynamic_offset if not pd.isna(high_value) else np.nan
+                for high_value in swing_highs
+            ],
+            index=ohlc.index,
+        )
+        low_offsets = pd.Series(
+            [
+                dynamic_offset if not pd.isna(low_value) else np.nan
+                for low_value in swing_lows
+            ],
+            index=ohlc.index,
+        )
+
         swing_high_markers = mpf.make_addplot(
-            ohlc["high"].where(swing_highs) * (1 + offset),
+            ohlc["high"].where(swing_highs) + high_offsets,
             type="scatter",
             marker="$⬇$",
             color=light if dark_mode else black,
             markersize=6,
         )
         swing_low_markers = mpf.make_addplot(
-            ohlc["low"].where(swing_lows) * (1 - offset),
+            ohlc["low"].where(swing_lows) - low_offsets,
             type="scatter",
             marker="$⬆$",
             color=light if dark_mode else black,
@@ -368,7 +387,7 @@ def plot_candlestick(
                 price = ohlc.loc[idx, "high"]
                 ax.annotate(
                     format_number(price, precision=4, is_format_k=False),
-                    (i, price * (1 + offset)),
+                    (i, price + dynamic_offset),
                     xytext=(0, 5),
                     textcoords="offset points",
                     ha="center",
@@ -381,7 +400,7 @@ def plot_candlestick(
 
                 ax.annotate(
                     format_number(price, precision=4, is_format_k=False),
-                    (i, price * (1 - offset)),
+                    (i, price - dynamic_offset),
                     xytext=(0, -5),
                     textcoords="offset points",
                     ha="center",
