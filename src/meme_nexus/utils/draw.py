@@ -120,16 +120,16 @@ def plot_candlestick(
     orange = "#b6420d"
     yellow = "#706b2b"
     lime_green = "#3a7d44"
-    blue = "#0ea0a4"
-    cyan = "#1b66af"
+    cyan = "#0ea0a4"
+    blue = "#1b66af"
 
     # Calculate or use provided Rainbow indicator components if enabled
     rainbow_cols = [
         "orange_line",
         "yellow_line",
         "green_line",
-        "blue_line",
         "cyan_line",
+        "blue_line",
         "bull_trend",
         "bear_trend",
         "bull_start",
@@ -169,11 +169,11 @@ def plot_candlestick(
         green_line_plot = mpf.make_addplot(
             ohlc["green_line"], color=lime_green, width=0.5, panel=0
         )
-        blue_line_plot = mpf.make_addplot(
-            ohlc["blue_line"], color=blue, width=0.5, panel=0
-        )
         cyan_line_plot = mpf.make_addplot(
             ohlc["cyan_line"], color=cyan, width=0.5, panel=0
+        )
+        blue_line_plot = mpf.make_addplot(
+            ohlc["blue_line"], color=blue, width=0.5, panel=0
         )
 
         addplots.extend(
@@ -181,8 +181,8 @@ def plot_candlestick(
                 orange_line_plot,
                 yellow_line_plot,
                 green_line_plot,
-                blue_line_plot,
                 cyan_line_plot,
+                blue_line_plot,
             ]
         )
 
