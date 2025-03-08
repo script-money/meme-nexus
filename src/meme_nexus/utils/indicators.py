@@ -70,8 +70,8 @@ def calculate_rainbow_indicator(
     1. Orange line (thick): MA of hl2 + 8 * RMA of ATR
     2. Yellow line (thin): MA of hl2 + 4 * RMA of ATR
     3. Green line (thin): MA of hl2
-    4. Blue line (thin): MA of hl2 - 4 * RMA of ATR
-    5. Cyan line (thick): MA of hl2 - 8 * RMA of ATR
+    4. Cyan line (thin): MA of hl2 - 4 * RMA of ATR
+    5. Blue line (thick): MA of hl2 - 8 * RMA of ATR
 
     Also calculates trend states and change points.
 
@@ -108,8 +108,8 @@ def calculate_rainbow_indicator(
     ohlc["orange_line"] = ohlc["ma"] + 8 * ohlc["atr_rma"]
     ohlc["yellow_line"] = ohlc["ma"] + 4 * ohlc["atr_rma"]
     ohlc["green_line"] = ohlc["ma"]
-    ohlc["blue_line"] = ohlc["ma"] - 4 * ohlc["atr_rma"]
-    ohlc["cyan_line"] = ohlc["ma"] - 8 * ohlc["atr_rma"]
+    ohlc["cyan_line"] = ohlc["ma"] - 4 * ohlc["atr_rma"]
+    ohlc["blue_line"] = ohlc["ma"] - 8 * ohlc["atr_rma"]
 
     ohlc["bull_trend"] = False
     ohlc["bear_trend"] = False
@@ -124,7 +124,7 @@ def calculate_rainbow_indicator(
 
         price_above_orange = ohlc.iloc[i]["close"] > ohlc.iloc[i]["orange_line"]
         price_below_green = ohlc.iloc[i]["close"] < ohlc.iloc[i]["green_line"]
-        price_below_cyan = ohlc.iloc[i]["close"] < ohlc.iloc[i]["cyan_line"]
+        price_below_blue = ohlc.iloc[i]["close"] < ohlc.iloc[i]["blue_line"]
         price_above_green = ohlc.iloc[i]["close"] > ohlc.iloc[i]["green_line"]
 
         prev_price_above_orange = (
@@ -133,8 +133,8 @@ def calculate_rainbow_indicator(
         prev_price_below_green = (
             ohlc.iloc[i - 1]["close"] < ohlc.iloc[i - 1]["green_line"]
         )
-        prev_price_below_cyan = (
-            ohlc.iloc[i - 1]["close"] < ohlc.iloc[i - 1]["cyan_line"]
+        prev_price_below_blue = (
+            ohlc.iloc[i - 1]["close"] < ohlc.iloc[i - 1]["blue_line"]
         )
         prev_price_above_green = (
             ohlc.iloc[i - 1]["close"] > ohlc.iloc[i - 1]["green_line"]
@@ -150,7 +150,7 @@ def calculate_rainbow_indicator(
         elif prev_bull:
             ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = True
 
-        if not prev_bear and price_below_cyan and not prev_price_below_cyan:
+        if not prev_bear and price_below_blue and not prev_price_below_blue:
             ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = True
             ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = False
             ohlc.iloc[i, ohlc.columns.get_loc("bear_start")] = True
@@ -164,8 +164,8 @@ def calculate_rainbow_indicator(
         "orange_line",
         "yellow_line",
         "green_line",
-        "blue_line",
         "cyan_line",
+        "blue_line",
         "bull_trend",
         "bear_trend",
         "bull_start",
