@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_swing_points(
-    df: pd.DataFrame, swing_length: int
+    df: pd.DataFrame, swing_length: int, only_killzone: bool = False
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
     """
     Calculate swing points from OHLC data.
@@ -18,6 +18,7 @@ def calculate_swing_points(
     Args:
         df: DataFrame with OHLC data
         swing_length: Length parameter for swing point calculation
+        only_killzone: If True, filter out non-active market hours (default: False)
 
     Returns:
         tuple containing:
@@ -56,6 +57,39 @@ def calculate_swing_points(
         # Now we can safely set the swing points
         swing_highs.loc[swings_filtered[swings_filtered["HighLow"] == 1.0].index] = True
         swing_lows.loc[swings_filtered[swings_filtered["HighLow"] == -1.0].index] = True
+
+    # Apply killzone filter if requested
+    if only_killzone:  # Check if index is datetime
+        # Filter out off-hours
+        off_hours_mask = df.index.hour.isin([5, 6, 7, 8, 9, 10, 11])
+
+        # Filter out weekend time (Saturday = 5, Sunday = 6)
+        weekend_mask = ((df.index.weekday == 5) & (df.index.hour >= 5)) | (
+            df.index.weekday == 6
+        )
+
+        # Combine both filters
+        filter_mask = off_hours_mask | weekend_mask
+
+        # Apply filter to swing_highs and swing_lows
+        swing_highs = swing_highs & ~filter_mask
+        swing_lows = swing_lows & ~filter_mask
+
+        # Apply filter to swings DataFrame if it exists
+        if swings is not None and not swings.empty and "swings_filtered" in locals():
+            # Get indices of swings that correspond to filtered time periods
+            filtered_timestamps = df.index[filter_mask]
+            filtered_numeric_indices = []
+
+            # Map filtered timestamps back to numeric indices
+            timestamp_to_numeric = {ts: i for i, ts in numeric_to_timestamp.items()}
+            for ts in swings_filtered.index:
+                if ts in filtered_timestamps and ts in timestamp_to_numeric:
+                    filtered_numeric_indices.append(timestamp_to_numeric[ts])
+
+            # Set HighLow values to NaN for filtered indices
+            if filtered_numeric_indices:
+                swings.loc[filtered_numeric_indices, "HighLow"] = float("nan")
 
     return swings, swing_highs, swing_lows
 
@@ -252,7 +286,9 @@ def calculate_bos_choch(
     return bos_choch
 
 
-def calculate_all_indicators(df: pd.DataFrame, swing_length: int = 16) -> dict:
+def calculate_all_indicators(
+    df: pd.DataFrame, swing_length: int = 16, only_killzone: bool = False
+) -> dict:
     """
     Calculate all technical indicators from OHLC data.
 
@@ -266,7 +302,10 @@ def calculate_all_indicators(df: pd.DataFrame, swing_length: int = 16) -> dict:
     result = {}
 
     # Calculate swing points
-    swings, swing_highs, swing_lows = calculate_swing_points(df, swing_length)
+    swings, swing_highs, swing_lows = calculate_swing_points(
+        df, swing_length, only_killzone
+    )
+
     result["swings"] = swings
     result["swing_highs"] = swing_highs
     result["swing_lows"] = swing_lows
