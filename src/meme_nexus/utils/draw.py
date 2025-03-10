@@ -34,6 +34,7 @@ def plot_candlestick(
     aggregate: int,
     limit: int | None = None,
     is_save_file=False,
+    only_killzone=False,
     cache_dir: str = "./tmp/images/",
     is_draw_swingpoint=False,
     is_draw_orderblock=False,
@@ -105,8 +106,9 @@ def plot_candlestick(
     if indicators is None:
         # Calculate indicators on-the-fly (backward compatibility)
         logger.info("No pre-calculated indicators provided, calculating on the fly")
-        swing_data = calculate_swing_points(ohlc, swing_length)
-        swings, swing_highs, swing_lows = swing_data
+        swings, swing_highs, swing_lows = calculate_swing_points(
+            ohlc, swing_length, only_killzone
+        )
     else:
         # Use provided indicators
         logger.info("Using provided indicators")

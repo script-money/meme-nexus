@@ -28,6 +28,7 @@ async def main():
         aggregate = 4
         timeframe = "h"
         use_cache = False
+        only_killzone = True
 
         csv_path = "examples/draw_cex_ohlcv.csv"
 
@@ -56,7 +57,7 @@ async def main():
         # 1: Calculate all indicators at once
         time0 = time.time()
         logger.info("Calculating all indicators")
-        all_indicators = calculate_all_indicators(ohlcv)
+        all_indicators = calculate_all_indicators(ohlcv, only_killzone=only_killzone)
         logger.info(f"All indicators calculated with {len(all_indicators)} components")
         logger.info(f"Time taken: {time.time() - time0:.2f} seconds")
 
@@ -68,12 +69,13 @@ async def main():
             timeframe,
             aggregate=aggregate,
             is_save_file=True,
+            only_killzone=only_killzone,
             is_draw_swingpoint=True,
             is_draw_orderblock=True,
             is_draw_liquidity=True,
             is_draw_fvg=True,
             is_draw_choch=True,
-            is_draw_rainbow=True,
+            is_draw_rainbow=False,
             dark_mode=False,
             indicators=all_indicators,  # Pass pre-calculated indicators
         )
