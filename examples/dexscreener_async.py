@@ -16,11 +16,6 @@ from datetime import datetime
 from meme_nexus.clients.dexscreener import DexScreenerClient
 from meme_nexus.exceptions import APIError
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
 logger = logging.getLogger(__name__)
 
 

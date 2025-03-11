@@ -10,12 +10,7 @@ from meme_nexus.utils.indicators import (
     calculate_all_indicators,
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+# Use the logging configuration from meme_nexus package
 logger = logging.getLogger(__name__)
 
 

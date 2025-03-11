@@ -5,7 +5,8 @@ import pandas as pd
 
 from meme_nexus.clients.geckoterminal import GeckoTerminalClient, OHLCVAttributes
 
-logging.basicConfig(level=logging.INFO)
+# Use the logging configuration from meme_nexus package
+logger = logging.getLogger(__name__)
 
 
 async def main():

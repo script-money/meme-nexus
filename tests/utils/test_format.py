@@ -3,10 +3,6 @@ import unittest
 
 from meme_nexus.utils.format import format_number
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 

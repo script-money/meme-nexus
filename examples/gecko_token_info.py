@@ -3,7 +3,8 @@ import logging
 
 from meme_nexus.clients.geckoterminal import GeckoTerminalClient
 
-logging.basicConfig(level=logging.INFO)
+# Use the logging configuration from meme_nexus package
+logger = logging.getLogger(__name__)
 
 
 async def analyze_token(token):
