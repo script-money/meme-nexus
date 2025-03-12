@@ -3,7 +3,7 @@ name = "memeNexus"
 version = "0.5.0"
 description = "A toolbox for meme trading"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.11.*"
 dependencies = [
     "apidance>=0.5.0",
     "ccxt>=4.4.64",
