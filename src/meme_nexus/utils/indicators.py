@@ -251,19 +251,44 @@ def calculate_liquidity(
     return liquidity
 
 
-def calculate_fvg(df: pd.DataFrame, join_consecutive: bool = False) -> pd.DataFrame:
+def calculate_fvg(
+    df: pd.DataFrame, join_consecutive: bool = False, min_height_percent: float = 1.0
+) -> pd.DataFrame:
     """
     Calculate Fair Value Gaps (FVG) from OHLC data.
 
     Args:
         df: DataFrame with OHLC data
         join_consecutive: Whether to join consecutive FVGs
+        min_height_percent: Minimum height of FVG as percentage of price (default: 1.0)
 
     Returns:
         DataFrame with FVGs
     """
     # Calculate FVGs using SMC library
     fvgs = smc.fvg(df, join_consecutive=join_consecutive)
+
+    # Filter FVGs by minimum height if we have any FVGs
+    if fvgs is not None and not fvgs.empty:
+        # Calculate height of each FVG
+        fvgs["Height"] = abs(fvgs["Top"] - fvgs["Bottom"])
+
+        # Calculate reference price (average of Top and Bottom)
+        fvgs["RefPrice"] = (fvgs["Top"] + fvgs["Bottom"]) / 2
+
+        # Calculate height as percentage of reference price
+        fvgs["HeightPercent"] = (fvgs["Height"] / fvgs["RefPrice"]) * 100
+
+        # Filter FVGs by minimum height percentage
+        fvgs = fvgs[fvgs["HeightPercent"] >= min_height_percent]
+
+        # Drop temporary columns
+        fvgs = fvgs.drop(["Height", "RefPrice", "HeightPercent"], axis=1)
+
+        # Reset index if any rows were filtered out
+        if len(fvgs) > 0:
+            fvgs = fvgs.reset_index(drop=True)
+
     return fvgs
 
 
