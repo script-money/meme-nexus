@@ -285,10 +285,6 @@ def calculate_fvg(
         # Drop temporary columns
         fvgs = fvgs.drop(["Height", "RefPrice", "HeightPercent"], axis=1)
 
-        # Reset index if any rows were filtered out
-        if len(fvgs) > 0:
-            fvgs = fvgs.reset_index(drop=True)
-
     return fvgs
 
 
