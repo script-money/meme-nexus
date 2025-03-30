@@ -2,12 +2,12 @@ import logging
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
 from httpx import HTTPStatusError
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -100,29 +100,31 @@ class PoolAttributes(BaseGeckoModel):
     transactions: TransactionsData
     volume_usd: VolumeUSD
 
-    @model_validator(mode="before")
-    def parse_numeric_strings(cls, values):
-        numeric_fields = {
-            "base_token_price_usd",
-            "quote_token_price_usd",
-            "base_token_price_native_currency",
-            "quote_token_price_native_currency",
-            "base_token_price_quote_token",
-            "quote_token_price_base_token",
-            "reserve_in_usd",
-            "fdv_usd",
-            "market_cap_usd",
-        }
-        for field in numeric_fields:
-            if field in values:
-                if values[field] is None:
-                    continue
-                if isinstance(values[field], str):
-                    values[field] = float(values[field]) if values[field] else None
-        # Convert transactions dict to TransactionsData
-        if "transactions" in values and isinstance(values["transactions"], dict):
-            values["transactions"] = TransactionsData(**values["transactions"])
-        return values
+    # List of fields that are Optional Floats potentially coming as strings
+    _optional_numeric_fields = [
+        "base_token_price_usd",
+        "quote_token_price_usd",
+        "base_token_price_native_currency",
+        "quote_token_price_native_currency",
+        "base_token_price_quote_token",
+        "quote_token_price_base_token",
+        "reserve_in_usd",
+        "fdv_usd",
+        "market_cap_usd",
+    ]
+
+    @field_validator(*_optional_numeric_fields, mode="before")
+    @classmethod
+    def preprocess_optional_numeric_str(cls, v: Any) -> Any:
+        """
+        Pre-processes optional numeric fields before Pydantic's main validation.
+        - Converts empty strings "" to None.
+        - Passes other values (valid numeric strings, numbers, None) through
+          for Pydantic to handle coercion and validation.
+        """
+        if v == "":
+            return None
+        return v
 
 
 class RelationshipData(BaseGeckoModel):
@@ -273,11 +275,24 @@ class GeckoTerminalClient:
         response.raise_for_status()
         try:
             json_data = response.json()
-            return PoolsResponse.model_validate(json_data)
-        except ValidationError as e:
-            logger.error(f"Model validation failed: {e!s}")
-            logger.error(f"Raw JSON data: {json_data}")
-            raise ValueError("API response structure does not match") from e
+        except Exception as e:
+            logger.error(f"Failed to parse JSON response: {e!s}")
+            raise ValueError("Failed to parse API response as JSON") from e
+
+        valid_pools: list[PoolResponse] = []
+        raw_pool_list = json_data.get("data", [])
+
+        for index, pool_data in enumerate(raw_pool_list):
+            try:
+                validated_pool = PoolResponse.model_validate(pool_data)
+                valid_pools.append(validated_pool)
+            except ValidationError as e:
+                pool_id = pool_data.get("id", f"index_{index}")
+                logger.warning(
+                    f"Skipping pool '{pool_id}' due to validation error: {e}"
+                )
+
+        return PoolsResponse(data=valid_pools)
 
     @retry(
         stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10)
