@@ -344,7 +344,7 @@ def calculate_all_indicators(
     result["liquidity"] = liquidity
 
     # Calculate FVGs
-    fvgs = calculate_fvg(df)
+    fvgs = calculate_fvg(df, join_consecutive=True, min_height_percent=2)
     result["fvgs"] = fvgs
 
     # Calculate BOS and CHoCH
