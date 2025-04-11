@@ -1,12 +1,9 @@
-import logging
 import warnings
 
 import numpy as np
 import pandas as pd
 
 from smartmoneyconcepts import smc
-
-logger = logging.getLogger(__name__)
 
 
 def calculate_swing_points(

@@ -1,5 +1,4 @@
 import base64
-import logging
 import os
 import warnings
 
@@ -23,8 +22,6 @@ from .indicators import (
     calculate_rainbow_indicator,
     calculate_swing_points,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def plot_candlestick(
@@ -105,14 +102,10 @@ def plot_candlestick(
     swing_length = max(6, round(base_length * (aggregate**0.5)))
 
     if indicators is None:
-        # Calculate indicators on-the-fly (backward compatibility)
-        logger.info("No pre-calculated indicators provided, calculating on the fly")
         swings, swing_highs, swing_lows = calculate_swing_points(
             ohlc, swing_length, only_killzone
         )
     else:
-        # Use provided indicators
-        logger.info("Using provided indicators")
         swings = indicators.get("swings")
         swing_highs = indicators.get("swing_highs")
         swing_lows = indicators.get("swing_lows")
@@ -138,13 +131,9 @@ def plot_candlestick(
 
     if is_draw_rainbow:
         if indicators is not None and all(col in indicators for col in rainbow_cols):
-            # Use provided rainbow indicators
-            logger.info("Using provided rainbow indicators")
             for col in rainbow_cols:
                 ohlc[col] = indicators[col]
         else:
-            # Calculate rainbow indicator on-the-fly
-            logger.info("Calculating rainbow indicators on the fly")
             rainbow_df = calculate_rainbow_indicator(ohlc)
             if not rainbow_df.empty:
                 # Copy all columns from the returned DataFrame to ohlc
@@ -422,10 +411,8 @@ def plot_candlestick(
         # Get or calculate order blocks
         if indicators is not None and "order_blocks" in indicators:
             ob = indicators["order_blocks"]
-            logger.info("Using provided order blocks")
         else:
             ob = calculate_order_blocks(ohlc, swings)
-            logger.info("Calculating order blocks on the fly")
 
         if is_draw_orderblock and not ob.empty:
             for idx, row in ob.iterrows():
@@ -476,10 +463,8 @@ def plot_candlestick(
             # Get or calculate liquidity
             if indicators is not None and "liquidity" in indicators:
                 liquidity = indicators["liquidity"]
-                logger.info("Using provided liquidity data")
             else:
                 liquidity = calculate_liquidity(ohlc, swings)
-                logger.info("Calculating liquidity on the fly")
             last_x = liquidity.index[-1]
             for _, row in liquidity.iterrows():
                 alpha = 0.15
@@ -514,10 +499,8 @@ def plot_candlestick(
             # Get or calculate FVGs
             if indicators is not None and "fvgs" in indicators:
                 fvgs = indicators["fvgs"]
-                logger.info("Using provided FVGs data")
             else:
                 fvgs = calculate_fvg(ohlc)
-                logger.info("Calculating FVGs on the fly")
             for _, fvg in fvgs.iterrows():
                 if (
                     pd.notna(fvg["Top"])
@@ -571,10 +554,8 @@ def plot_candlestick(
             # Get or calculate BOS/CHOCH data
             if indicators is not None and "bos_choch" in indicators:
                 bos_choch = indicators["bos_choch"]
-                logger.info("Using provided BOS/CHOCH data")
             else:
                 bos_choch = calculate_bos_choch(ohlc, swings)
-                logger.info("Calculating BOS/CHOCH on the fly")
 
             if not bos_choch.empty:
                 valid_rows = bos_choch.dropna(subset=["BOS", "CHOCH"], how="all")

@@ -1,13 +1,9 @@
-import logging
-
 import httpx
 
 from pydantic import BaseModel, Field, model_validator
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from meme_nexus.exceptions import APIError
-
-logger = logging.getLogger(__name__)
 
 
 class BaseDexModel(BaseModel):
@@ -175,7 +171,6 @@ class DexScreenerClient:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPError as e:
-            logger.error(f"DexScreener API request failed: {e}")
             raise APIError(f"DexScreener API request failed: {e}") from e
 
     async def search_by_token_address(self, token_address: str) -> DexScreenerResponse:
@@ -195,7 +190,6 @@ class DexScreenerClient:
         try:
             return DexScreenerResponse.model_validate(data)
         except Exception as e:
-            logger.error(f"Failed to parse DexScreener response: {e}")
             raise APIError(f"Failed to parse DexScreener response: {e}") from e
 
     async def close(self):
