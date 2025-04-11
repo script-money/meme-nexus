@@ -471,17 +471,30 @@ def plot_candlestick(
                 logger.info("Calculating liquidity on the fly")
             last_x = liquidity.index[-1]
             for _, row in liquidity.iterrows():
-                alpha = 0.1
+                alpha = 0.15
                 if row["Swept"] == 0:
                     row["Swept"] = last_x
-                    alpha = 1.0
-                color = green if row["Liquidity"] == -1.0 else red
+                    alpha = 0.75
+                color = green if row["Liquidity"] == 1.0 else red
+                label = "BSL" if row["Liquidity"] == 1.0 else "SSL"
                 ax.hlines(
                     y=row["Level"],
                     xmin=_,
                     xmax=row["Swept"],
                     color=color,
-                    linewidth=0.8,
+                    linewidth=1,
+                    alpha=alpha,
+                )
+                # Add BSL or SSL label in the middle of the line
+                mid_x = (_ + row["Swept"]) / 2
+                ax.text(
+                    mid_x,
+                    row["Level"],
+                    label,
+                    fontsize=4,
+                    ha="center",
+                    va=("bottom" if row["Liquidity"] == 1.0 else "top"),
+                    color=color,
                     alpha=alpha,
                 )
 
