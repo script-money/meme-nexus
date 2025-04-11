@@ -370,17 +370,23 @@ def plot_candlestick(
         alpha=1,
     )
 
-    # Adjust x-axis ticks to show local time
-    ax.xaxis.set_major_formatter(
-        plt.FuncFormatter(
-            lambda x, p: (
-                datetime.fromtimestamp(ohlc.index[int(x)].timestamp()).strftime(
-                    "%m-%d %H:%M"
-                )
-                if x < len(ohlc)
-                else ""
-            )
-        )
+    # Completely reset x-axis ticks to ensure the last timestamp is included
+    num_ticks = min(10, len(ohlc))  # Control the number of ticks to avoid overcrowding
+    tick_indices = np.linspace(0, len(ohlc) - 1, num_ticks, dtype=int)
+
+    # Ensure the last point is included
+    if tick_indices[-1] != len(ohlc) - 1:
+        tick_indices[-1] = len(ohlc) - 1
+
+    ax.set_xticks(tick_indices)
+
+    # Set tick label format
+    ax.set_xticklabels(
+        [
+            datetime.fromtimestamp(ohlc.index[i].timestamp()).strftime("%m-%d %H:%M")
+            for i in tick_indices
+        ],
+        rotation=0,
     )
 
     # Draw all time highs and lows
