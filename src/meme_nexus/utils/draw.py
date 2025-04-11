@@ -132,12 +132,7 @@ def plot_candlestick(
         "green_line",
         "cyan_line",
         "blue_line",
-        "bull_trend",
-        "bear_trend",
-        "bull_start",
-        "bull_end",
-        "bear_start",
-        "bear_end",
+        "trend",
     ]
 
     if is_draw_rainbow:
@@ -149,11 +144,11 @@ def plot_candlestick(
         else:
             # Calculate rainbow indicator on-the-fly
             logger.info("Calculating rainbow indicators on the fly")
-            rainbow_data = calculate_rainbow_indicator(ohlc)
-            if rainbow_data:
-                for col in rainbow_cols:
-                    if col in rainbow_data:
-                        ohlc[col] = rainbow_data[col]
+            rainbow_df = calculate_rainbow_indicator(ohlc)
+            if not rainbow_df.empty:
+                # Copy all columns from the returned DataFrame to ohlc
+                for col in rainbow_df.columns:
+                    ohlc[col] = rainbow_df[col]
             else:
                 warnings.warn(
                     "Insufficient data to calculate Rainbow indicator.",
@@ -188,10 +183,17 @@ def plot_candlestick(
             ]
         )
 
-        # Add trend signals - ensure marker data is not empty
-        if ohlc["bull_start"].any():
+        # Add trend signals based on trend column changes
+        # Create trend change markers
+        bull_start = (ohlc["trend"] == 1) & (ohlc["trend"].shift(1) != 1)
+        bull_end = (ohlc["trend"] == 0) & (ohlc["trend"].shift(1) == 1)
+        bear_start = (ohlc["trend"] == -1) & (ohlc["trend"].shift(1) != -1)
+        bear_end = (ohlc["trend"] == 0) & (ohlc["trend"].shift(1) == -1)
+
+        # Add markers for trend changes
+        if bull_start.any():
             bull_start_markers = mpf.make_addplot(
-                ohlc["close"].where(ohlc["bull_start"]),
+                ohlc["close"].where(bull_start),
                 type="scatter",
                 marker="^",  # Up arrow
                 markersize=60,
@@ -200,9 +202,9 @@ def plot_candlestick(
             )
             addplots.append(bull_start_markers)
 
-        if ohlc["bull_end"].any():
+        if bull_end.any():
             bull_end_markers = mpf.make_addplot(
-                ohlc["close"].where(ohlc["bull_end"]),
+                ohlc["close"].where(bull_end),
                 type="scatter",
                 marker="x",  # X mark
                 markersize=60,
@@ -211,9 +213,9 @@ def plot_candlestick(
             )
             addplots.append(bull_end_markers)
 
-        if ohlc["bear_start"].any():
+        if bear_start.any():
             bear_start_markers = mpf.make_addplot(
-                ohlc["close"].where(ohlc["bear_start"]),
+                ohlc["close"].where(bear_start),
                 type="scatter",
                 marker="v",  # Down arrow
                 markersize=60,
@@ -222,9 +224,9 @@ def plot_candlestick(
             )
             addplots.append(bear_start_markers)
 
-        if ohlc["bear_end"].any():
+        if bear_end.any():
             bear_end_markers = mpf.make_addplot(
-                ohlc["close"].where(ohlc["bear_end"]),
+                ohlc["close"].where(bear_end),
                 type="scatter",
                 marker="x",  # X mark
                 markersize=60,

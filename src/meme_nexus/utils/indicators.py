@@ -96,7 +96,7 @@ def calculate_swing_points(
 
 def calculate_rainbow_indicator(
     ohlc: pd.DataFrame, ma_period: int = 100, atr_period: int = 200
-) -> dict:
+) -> pd.DataFrame:
     """
     Calculate Rainbow indicator components.
 
@@ -107,18 +107,19 @@ def calculate_rainbow_indicator(
     4. Cyan line (thin): MA of hl2 - 4 * RMA of ATR
     5. Blue line (thick): MA of hl2 - 8 * RMA of ATR
 
-    Also calculates trend states and change points.
+    Also calculates trend state:
+    - 1: Bull trend (price above orange line)
+    - 0: Neutral (no clear trend)
+    - -1: Bear trend (price below blue line)
 
     Args:
-        df: DataFrame with OHLC data
+        ohlc: DataFrame with OHLC data
         ma_period: Period for Moving Average calculation (default: 100)
         atr_period: Period for ATR calculation (default: 200)
 
     Returns:
-        Dictionary with calculated indicators and signals
+        DataFrame with calculated indicators and trend column
     """
-    result = {}
-
     # Ensure sufficient data for calculations
     min_required_data = max(ma_period, atr_period)
     if len(ohlc) < min_required_data:
@@ -126,7 +127,7 @@ def calculate_rainbow_indicator(
             f"Need at least {min_required_data} data to calculate Rainbow indicator.",
             stacklevel=2,
         )
-        return None
+        return pd.DataFrame()
 
     ohlc["hl2"] = (ohlc["high"] + ohlc["low"]) / 2
     ohlc["ma"] = ohlc["hl2"].rolling(window=ma_period).mean()
@@ -145,16 +146,11 @@ def calculate_rainbow_indicator(
     ohlc["cyan_line"] = ohlc["ma"] - 4 * ohlc["atr_rma"]
     ohlc["blue_line"] = ohlc["ma"] - 8 * ohlc["atr_rma"]
 
-    ohlc["bull_trend"] = False
-    ohlc["bear_trend"] = False
-    ohlc["bull_start"] = False
-    ohlc["bull_end"] = False
-    ohlc["bear_start"] = False
-    ohlc["bear_end"] = False
+    # Initialize trend column with 0 (neutral/oscillating)
+    ohlc["trend"] = 0
 
     for i in range(1, len(ohlc)):
-        prev_bull = ohlc.iloc[i - 1]["bull_trend"]
-        prev_bear = ohlc.iloc[i - 1]["bear_trend"]
+        prev_trend = ohlc.iloc[i - 1]["trend"]
 
         price_above_orange = ohlc.iloc[i]["close"] > ohlc.iloc[i]["orange_line"]
         price_below_green = ohlc.iloc[i]["close"] < ohlc.iloc[i]["green_line"]
@@ -174,44 +170,36 @@ def calculate_rainbow_indicator(
             ohlc.iloc[i - 1]["close"] > ohlc.iloc[i - 1]["green_line"]
         )
 
-        if not prev_bull and price_above_orange and not prev_price_above_orange:
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = True
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = False
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_start")] = True
-        elif prev_bull and price_below_green and not prev_price_below_green:
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = False
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_end")] = True
-        elif prev_bull:
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = True
+        # Bull trend logic (trend = 1)
+        if prev_trend != 1 and price_above_orange and not prev_price_above_orange:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = 1
+        elif prev_trend == 1 and price_below_green and not prev_price_below_green:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = 0
+        elif prev_trend == 1:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = 1
 
-        if not prev_bear and price_below_blue and not prev_price_below_blue:
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = True
-            ohlc.iloc[i, ohlc.columns.get_loc("bull_trend")] = False
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_start")] = True
-        elif prev_bear and price_above_green and not prev_price_above_green:
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = False
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_end")] = True
-        elif prev_bear:
-            ohlc.iloc[i, ohlc.columns.get_loc("bear_trend")] = True
+        # Bear trend logic (trend = -1)
+        if prev_trend != -1 and price_below_blue and not prev_price_below_blue:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = -1
+        elif prev_trend == -1 and price_above_green and not prev_price_above_green:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = 0
+        elif prev_trend == -1:
+            ohlc.iloc[i, ohlc.columns.get_loc("trend")] = -1
 
+    # Select only the relevant columns for the result DataFrame
     rainbow_cols = [
         "orange_line",
         "yellow_line",
         "green_line",
         "cyan_line",
         "blue_line",
-        "bull_trend",
-        "bear_trend",
-        "bull_start",
-        "bull_end",
-        "bear_start",
-        "bear_end",
+        "trend",
     ]
 
-    for col in rainbow_cols:
-        result[col] = ohlc[col]
+    # Return a new DataFrame with only the rainbow indicator columns
+    result_df = ohlc[rainbow_cols].copy()
 
-    return result
+    return result_df
 
 
 def calculate_order_blocks(df: pd.DataFrame, swings: pd.DataFrame) -> pd.DataFrame:
