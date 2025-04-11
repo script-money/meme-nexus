@@ -42,6 +42,7 @@ def plot_candlestick(
     is_draw_fvg=False,
     is_draw_choch=False,
     is_draw_rainbow=False,
+    is_draw_volume=True,
     dark_mode=True,
     indicators: dict[str, Any] | None = None,
 ) -> tuple[str, str, str]:
@@ -88,7 +89,7 @@ def plot_candlestick(
         },
     )
 
-    # Create custom volume overlay
+    # Create custom volume overlay if needed
     colors = [
         green if close >= open else red
         for open, close in zip(ohlc["open"], ohlc["close"], strict=True)
@@ -116,7 +117,7 @@ def plot_candlestick(
         swing_highs = indicators.get("swing_highs")
         swing_lows = indicators.get("swing_lows")
 
-    addplots = [volume_overlay]
+    addplots = [volume_overlay] if is_draw_volume else []
 
     # Rainbow colors
     orange = "#b6420d"
@@ -274,6 +275,8 @@ def plot_candlestick(
 
     plt.rcParams.update({"font.size": 8})
 
+    panel_ratios = (3, 1) if is_draw_volume else (1,)
+
     fig, ax_all = mpf.plot(
         ohlc,
         type="candle",
@@ -283,16 +286,17 @@ def plot_candlestick(
         datetime_format="%m-%d %H:%M",
         xrotation=0,
         returnfig=True,
-        panel_ratios=(3, 1),
+        panel_ratios=panel_ratios,
         tight_layout=True,
         scale_padding={"left": 0, "right": 0},
         ylabel="",
         warn_too_much_data=10000,
+        volume=is_draw_volume,
     )
 
     # Get the main price subplot (usually the first one)
     ax = ax_all[0]
-    ax_volume = ax_all[2]
+    ax_volume = ax_all[2] if is_draw_volume else None
 
     # Set more space for y axis
     y_min = ohlc["low"].min()
@@ -302,12 +306,13 @@ def plot_candlestick(
 
     # Reduce x and y label size
     ax.tick_params(axis="both", which="major", labelsize=6)
-    ax_volume.tick_params(axis="both", which="major", labelsize=6)
 
-    # Format volume
-    ax_volume.yaxis.set_major_formatter(
-        plt.FuncFormatter(lambda x, p: format_number(x))
-    )
+    # Format volume if it exists
+    if is_draw_volume and ax_volume is not None:
+        ax_volume.tick_params(axis="both", which="major", labelsize=6)
+        ax_volume.yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda x, p: format_number(x))
+        )
 
     # Add horizontal dotted lines for the main chart
     ax.grid(axis="x", linewidth=0.1, color=light)
