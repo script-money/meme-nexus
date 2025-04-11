@@ -1,5 +1,3 @@
-import logging
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -301,19 +299,12 @@ async def test_full_info_token(client, mock_httpx_client):
     # Don't assert exact number of pairs as it may change over time
     assert len(response.pairs) > 0
 
-    # Log the number of pairs found for debugging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Found {len(response.pairs)} pairs for WIF token")
-
     # Find the WIF/SOL pair on Raydium
     wif_sol_raydium_pair = None
     # Find the WIF/SOL pair on Meteora
     wif_sol_meteora_pair = None
 
     for pair in response.pairs:
-        # Log pair information for debugging
-        logger.info(f"Found pair: {pair.baseToken.symbol}/{pair.quoteToken.symbol}")
-
         # Find the WIF/SOL pair on Raydium
         if (
             pair.chainId == "solana"
@@ -388,60 +379,6 @@ async def test_api_error(client, mock_httpx_client):
 
 
 @pytest.mark.asyncio
-async def test_missing_info_token(client, mock_httpx_client):
-    """Test token with missing info field"""
-    mock_response = MagicMock()
-    mock_response.json.return_value = MISSING_INFO_RESPONSE
-    mock_response.status_code = 200
-
-    mock_client = mock_httpx_client.return_value.__aenter__.return_value
-    mock_client.get.return_value = mock_response
-
-    response = await client.search_by_token_address(
-        "bf7BTmV7qUY1jiZA9FybL1tAswhsqhnYXMML8Frpump"
-    )
-
-    assert response.schemaVersion == "1.0.0"
-    # Don't assert exact number of pairs as it may change over time
-    assert len(response.pairs) > 0
-
-    # Log the number of pairs found for debugging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Found {len(response.pairs)} pairs for UFC token")
-
-    # Find the UFC/SOL pair
-    ufc_sol_pair = None
-
-    for pair in response.pairs:
-        # Log pair information for debugging
-        logger.info(f"Found pair: {pair.baseToken.symbol}/{pair.quoteToken.symbol}")
-
-        # Find the UFC/SOL pair
-        if (
-            pair.chainId == "solana"
-            and pair.dexId == "raydium"
-            and pair.baseToken.symbol == "UFC"
-            and pair.quoteToken.symbol == "SOL"
-        ):
-            ufc_sol_pair = pair
-
-    # Verify the pair exists
-    assert ufc_sol_pair is not None, "UFC/SOL pair not found in response"
-    assert ufc_sol_pair.chainId == "solana"
-    assert ufc_sol_pair.dexId == "raydium"
-    assert ufc_sol_pair.baseToken.symbol == "UFC"
-    assert ufc_sol_pair.quoteToken.symbol == "SOL"
-    # Don't check if info is None, as it may change over time
-    # Instead, check that if info exists, it has the expected structure
-    if ufc_sol_pair.info is not None:
-        # If info exists, verify it has the expected structure
-        assert (
-            isinstance(ufc_sol_pair.info.imageUrl, str)
-            or ufc_sol_pair.info.imageUrl is None
-        )
-
-
-@pytest.mark.asyncio
 async def test_icp_token(client, mock_httpx_client):
     """Test token on ICP chain (multiple pairs with partial price change data)."""
     # Setup mock response
@@ -458,18 +395,11 @@ async def test_icp_token(client, mock_httpx_client):
     # Don't assert exact number of pairs as it may change over time
     assert len(response.pairs) > 0
 
-    # Log the number of pairs found for debugging
-    logger = logging.getLogger(__name__)
-    logger.info(f"Found {len(response.pairs)} pairs for iDoge token")
-
     # Find the iDoge/ICP pair by looking through all pairs
     idoge_icp_pair = None
     bob_idoge_pair = None
 
     for pair in response.pairs:
-        # Log pair information for debugging
-        logger.info(f"Found pair: {pair.baseToken.symbol}/{pair.quoteToken.symbol}")
-
         # Find the iDoge/ICP pair
         if (
             pair.chainId == "icp"

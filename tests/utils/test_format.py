@@ -1,9 +1,6 @@
-import logging
 import unittest
 
 from meme_nexus.utils.format import format_number
-
-logger = logging.getLogger(__name__)
 
 
 class TestFormatNumber(unittest.TestCase):
