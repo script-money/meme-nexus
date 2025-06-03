@@ -40,6 +40,7 @@ def plot_candlestick(
     is_draw_choch=False,
     is_draw_rainbow=False,
     is_draw_volume=True,
+    is_draw_last_price=True,
     dark_mode=True,
     indicators: dict[str, Any] | None = None,
 ) -> tuple[str, str, str]:
@@ -306,6 +307,39 @@ def plot_candlestick(
     # Add horizontal dotted lines for the main chart
     ax.grid(axis="x", linewidth=0.1, color=light)
     ax.grid(axis="y", linewidth=0.1, color=light)
+
+    # Add last price marker on Y-axis
+    if is_draw_last_price:
+        last_price = ohlc["close"].iloc[-1]
+        prev_price = ohlc["close"].iloc[-2] if len(ohlc) > 1 else last_price
+        price_color = green if last_price >= prev_price else red
+
+        # Get current y-axis ticks and labels
+        current_ticks = list(ax.get_yticks())
+        current_labels = [
+            format_number(tick, precision=4, is_format_k=False)
+            for tick in current_ticks
+        ]
+
+        # Add the last price to ticks
+        current_ticks.append(last_price)
+        current_labels.append(format_number(last_price, precision=4, is_format_k=False))
+
+        # Set new ticks and labels
+        ax.set_yticks(current_ticks)
+        ax.set_yticklabels(current_labels)
+
+        # Highlight the last price tick
+        for i, tick in enumerate(current_ticks):
+            if abs(tick - last_price) < 0.0001:  # Match the last price tick
+                ax.get_yticklabels()[i].set_color(white)
+                ax.get_yticklabels()[i].set_bbox(
+                    {
+                        "boxstyle": "square,pad=0.4",
+                        "mutation_aspect": 0.5,
+                        "color": price_color,
+                    }
+                )
 
     # Add swing points' price labels
     if is_draw_swingpoint:
