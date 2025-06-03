@@ -1,3 +1,6 @@
+from decimal import ROUND_HALF_UP, Decimal
+
+
 def format_number(value: float, precision: int = 2, is_format_k: bool = True) -> str:
     """
     Format a number with appropriate unit suffix (T, B, M, K) and precision.
@@ -29,31 +32,40 @@ def format_number(value: float, precision: int = 2, is_format_k: bool = True) ->
     if value == 0:
         return "0"
 
-    abs_value = abs(value)
-    sign = "-" if value < 0 else ""
+    # First round the float to a reasonable precision to eliminate floating point errors
+    # Use a higher precision for intermediate calculations
+    max_precision = max(precision + 2, 10)
+    rounded_value = round(value, max_precision)
+
+    # Use Decimal for precise arithmetic
+    decimal_value = Decimal(str(rounded_value))
+    abs_value = abs(decimal_value)
+    sign = "-" if decimal_value < 0 else ""
 
     # Define units with divisors, including the base case (no unit)
     units = [
-        (1_000_000_000_000, "T"),
-        (1_000_000_000, "B"),
-        (1_000_000, "M"),
-        (1_000, "K" if is_format_k else ""),
-        (1, ""),
+        (Decimal("1000000000000"), "T"),
+        (Decimal("1000000000"), "B"),
+        (Decimal("1000000"), "M"),
+        (Decimal("1000"), "K" if is_format_k else ""),
+        (Decimal("1"), ""),
     ]
 
     # Find the largest applicable divisor and unit
     for divisor, unit in units:
         if abs_value >= divisor:
             # When is_format_k=False and divisor=1000, don't divide the value
-            if not is_format_k and divisor == 1000:
+            if not is_format_k and divisor == Decimal("1000"):
                 # For decimal values, format with the minimum necessary precision
                 if abs_value % 1 != 0:
-                    # Convert to string with specified precision
-                    formatted = f"{sign}{abs_value:.{precision}f}"
-                    # Remove trailing zeros
-                    formatted = formatted.rstrip("0").rstrip(
-                        "." if formatted.endswith(".") else ""
+                    # Round to specified precision to avoid floating point errors
+                    rounded_value = abs_value.quantize(
+                        Decimal("0." + "0" * precision), rounding=ROUND_HALF_UP
                     )
+                    formatted = f"{sign}{rounded_value}"
+                    # Remove trailing zeros and decimal point if needed
+                    if "." in formatted:
+                        formatted = formatted.rstrip("0").rstrip(".")
                 else:
                     formatted = f"{sign}{int(abs_value)}"
             else:
@@ -63,21 +75,25 @@ def format_number(value: float, precision: int = 2, is_format_k: bool = True) ->
                 # Round according to precision
                 if precision == 0:
                     # For precision=0, round directly to integer
-                    rounded_result = round(result)
+                    rounded_result = int(
+                        result.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+                    )
                     formatted = f"{sign}{rounded_result}{unit}"
                 else:
-                    # Handle cases where decimal is close to integer (1000.5 -> 1K)
-                    rounded_to_precision = round(result, precision)
-                    if rounded_to_precision == round(rounded_to_precision):
-                        formatted = f"{sign}{int(rounded_to_precision)}{unit}"
+                    # Round to specified precision
+                    rounded_result = result.quantize(
+                        Decimal("0." + "0" * precision), rounding=ROUND_HALF_UP
+                    )
+
+                    # Check if the rounded result is effectively an integer
+                    if rounded_result % 1 == 0:
+                        formatted = f"{sign}{int(rounded_result)}{unit}"
                     else:
-                        # Format with specified precision but remove trailing zeros
-                        formatted = f"{sign}{rounded_to_precision:.{precision}f}{unit}"
+                        formatted = f"{sign}{rounded_result}{unit}"
                         # Remove trailing zeros and decimal point if present
-                        if "." in formatted:
-                            formatted = formatted.rstrip("0").rstrip(
-                                "." if formatted.endswith(".") else ""
-                            )
+                        if "." in formatted and unit == "":
+                            # Only strip trailing zeros for values without units
+                            formatted = formatted.rstrip("0").rstrip(".")
 
             return formatted
 

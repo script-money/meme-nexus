@@ -303,6 +303,7 @@ def plot_candlestick(
         ax_volume.yaxis.set_major_formatter(
             plt.FuncFormatter(lambda x, p: format_number(x))
         )
+        ax_volume.set_ylabel("")
 
     # Add horizontal dotted lines for the main chart
     ax.grid(axis="x", linewidth=0.1, color=light)
