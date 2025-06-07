@@ -6,6 +6,52 @@ import pandas as pd
 from smartmoneyconcepts import smc
 
 
+def create_active_session_mask(index: pd.DatetimeIndex) -> pd.Series:
+    """
+    Creates a boolean mask to identify active trading sessions for time series data.
+
+    This function identifies inactive trading periods (the "Killzone") based on
+    predefined rules and returns a boolean mask. `True` values in the mask
+    indicate that the corresponding timestamp is within an active session.
+
+    The inactive period (Killzone) is defined as:
+    1. Hours between 05:00 and 11:59 UTC.
+    2. Weekends: After 05:00 UTC on Saturday, and all of Sunday.
+
+    Note: This function assumes the input DatetimeIndex is in the UTC timezone.
+          If your data uses a different timezone, please convert it to UTC before
+          using this function. E.g., `df.index.tz_convert('UTC')`.
+
+    Args:
+        index: A pandas DatetimeIndex object.
+
+    Returns:
+        A boolean pandas Series, aligned with the input index.
+        - True: Indicates an active session.
+        - False: Indicates an inactive session (Killzone).
+    """
+    if isinstance(index, pd.DatetimeIndex):
+        # These operations on a DatetimeIndex return NumPy arrays
+        off_hours_mask = index.hour.isin([4, 5, 6, 7, 8, 9, 10, 11])
+        weekend_mask = (
+            ((index.weekday == 5) & (index.hour >= 5))
+            | (index.weekday == 6)
+            | ((index.weekday == 0) & (index.hour < 5))
+        )
+
+        exclusion_mask = off_hours_mask | weekend_mask
+        active_session_mask_array = ~exclusion_mask
+
+        return pd.Series(
+            active_session_mask_array,
+            index=index,
+            name="active_mask",
+            dtype=bool,
+        )
+    else:
+        raise TypeError("Input must be a pandas DatetimeIndex.")
+
+
 def calculate_swing_points(
     df: pd.DataFrame, swing_length: int, only_killzone: bool = False
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
@@ -13,80 +59,69 @@ def calculate_swing_points(
     Calculate swing points from OHLC data.
 
     Args:
-        df: DataFrame with OHLC data
-        swing_length: Length parameter for swing point calculation
-        only_killzone: If True, filter out non-active market hours (default: False)
+        df: DataFrame with OHLC data.
+        swing_length: Length parameter for swing point calculation.
+        only_killzone: If True, filters out swing points that are not in
+                       active trading sessions (default: False).
 
     Returns:
-        tuple containing:
-            - swings DataFrame with swing points
-            - swing_highs Series (boolean mask)
-            - swing_lows Series (boolean mask)
+        A tuple containing:
+            - swings DataFrame: DataFrame with swing point information.
+            - swing_highs Series: Boolean mask for swing highs.
+            - swing_lows Series: Boolean mask for swing lows.
     """
     # Get the swings using SMC library
     swings = smc.swing_highs_lows(df, swing_length=swing_length)
 
-    # If swings is not None and not empty, set the last swing_length points to NaN
     if swings is not None and not swings.empty:
         last_n_indices = (
             swings.index[-swing_length:] if len(swings) > swing_length else swings.index
         )
         swings.loc[last_n_indices, "HighLow"] = float("nan")
-
         first_n_indices = (
             swings.index[:swing_length] if len(swings) > swing_length else swings.index
         )
         swings.loc[first_n_indices, "HighLow"] = float("nan")
 
-    # Create empty series for swing points
     swing_highs = pd.Series(False, index=df.index)
     swing_lows = pd.Series(False, index=df.index)
 
     if swings is not None:
-        # Filter out invalid indices
         numeric_to_timestamp = dict(enumerate(df.index))
         valid_indices = [i for i in swings.index if i < len(numeric_to_timestamp)]
         swings_filtered = swings.loc[valid_indices]
         swings_filtered.index = swings_filtered.index.map(
             lambda x: numeric_to_timestamp[x]
         )
-
-        # Now we can safely set the swing points
         swing_highs.loc[swings_filtered[swings_filtered["HighLow"] == 1.0].index] = True
         swing_lows.loc[swings_filtered[swings_filtered["HighLow"] == -1.0].index] = True
 
     # Apply killzone filter if requested
-    if only_killzone:  # Check if index is datetime
-        # Filter out off-hours
-        off_hours_mask = df.index.hour.isin([5, 6, 7, 8, 9, 10, 11])
+    if only_killzone:
+        # 1. Call the standalone function to generate the active session mask
+        active_mask = create_active_session_mask(df.index)
 
-        # Filter out weekend time (Saturday = 5, Sunday = 6)
-        weekend_mask = ((df.index.weekday == 5) & (df.index.hour >= 5)) | (
-            df.index.weekday == 6
-        )
+        # 2. Apply the mask to swing_highs and swing_lows
+        #    Keep a swing point only if it's also True in the active_mask
+        swing_highs &= active_mask
+        swing_lows &= active_mask
 
-        # Combine both filters
-        filter_mask = off_hours_mask | weekend_mask
-
-        # Apply filter to swing_highs and swing_lows
-        swing_highs = swing_highs & ~filter_mask
-        swing_lows = swing_lows & ~filter_mask
-
-        # Apply filter to swings DataFrame if it exists
+        # 3. Apply the filter to the original swings DataFrame as well
         if swings is not None and not swings.empty and "swings_filtered" in locals():
-            # Get indices of swings that correspond to filtered time periods
-            filtered_timestamps = df.index[filter_mask]
-            filtered_numeric_indices = []
+            # Find all timestamps that are in the inactive period
+            inactive_timestamps = df.index[~active_mask]
 
-            # Map filtered timestamps back to numeric indices
+            # Map these timestamps back to the numeric indices
             timestamp_to_numeric = {ts: i for i, ts in numeric_to_timestamp.items()}
-            for ts in swings_filtered.index:
-                if ts in filtered_timestamps and ts in timestamp_to_numeric:
-                    filtered_numeric_indices.append(timestamp_to_numeric[ts])
+            inactive_numeric_indices = [
+                timestamp_to_numeric[ts]
+                for ts in swings_filtered.index
+                if ts in inactive_timestamps
+            ]
 
-            # Set HighLow values to NaN for filtered indices
-            if filtered_numeric_indices:
-                swings.loc[filtered_numeric_indices, "HighLow"] = float("nan")
+            # Set the HighLow value to NaN for swings in the inactive period
+            if inactive_numeric_indices:
+                swings.loc[inactive_numeric_indices, "HighLow"] = float("nan")
 
     return swings, swing_highs, swing_lows
 
