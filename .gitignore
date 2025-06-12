@@ -11,11 +11,12 @@ uv.lock
 .venv
 
 # Temporary files
-tmp/
 .DS_Store
+tmp/
 
 # windsurf rules
 .windsurfrules
 
 examples/*.csv
+examples/*heatmap*.json
 .aider*

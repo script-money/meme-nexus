@@ -32,6 +32,7 @@ from .elements import (
     draw_fvg,
     draw_highs_lows,
     draw_last_price,
+    draw_liquidation_heatmap,
     draw_liquidity,
     draw_order_blocks,
     draw_rainbow_indicator,
@@ -57,6 +58,8 @@ def plot_candlestick(
     is_draw_rainbow=False,
     is_draw_volume=True,
     is_draw_last_price=True,
+    is_draw_liquidation_heatmap=False,
+    liquidation_heatmap_data: dict | None = None,
     dark_mode=True,
     indicators: dict[str, Any] | None = None,
 ) -> tuple[str, str, str]:
@@ -190,23 +193,28 @@ def plot_candlestick(
     panel_ratios = (3, 1) if is_draw_volume else (1,)
 
     # Create the main plot
-    fig, ax_all = mpf.plot(
-        ohlc,
-        type="candle",
-        style=style,
-        addplot=addplots,
-        figsize=(10, 5),
-        datetime_format="%m-%d %H:%M",
-        xrotation=0,
-        returnfig=True,
-        panel_ratios=panel_ratios,
-        tight_layout=True,
-        scale_padding={"left": 0, "right": 0},
-        ylabel="",
-        warn_too_much_data=10000,
-        volume=is_draw_volume,
-        marketcolor_overrides=marketcolor_overrides,
-    )
+    plot_kwargs = {
+        "data": ohlc,
+        "type": "candle",
+        "style": style,
+        "addplot": addplots,
+        "figsize": (10, 5),
+        "datetime_format": "%m-%d %H:%M",
+        "xrotation": 0,
+        "returnfig": True,
+        "panel_ratios": panel_ratios,
+        "tight_layout": True,
+        "scale_padding": {"left": 0, "right": 0},
+        "ylabel": "",
+        "warn_too_much_data": 10000,
+        "volume": is_draw_volume,
+    }
+
+    # Only add marketcolor_overrides if it's not None
+    if marketcolor_overrides is not None:
+        plot_kwargs["marketcolor_overrides"] = marketcolor_overrides
+
+    fig, ax_all = mpf.plot(**plot_kwargs)
 
     # Get axes
     ax = ax_all[0]
@@ -220,6 +228,12 @@ def plot_candlestick(
 
     # Configure axes
     ax.tick_params(axis="both", which="major", labelsize=6)
+
+    # Double the Y-axis tick density
+    from matplotlib.ticker import MaxNLocator
+
+    current_ticks = len(ax.get_yticks())
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=current_ticks * 2))
 
     if is_draw_volume and ax_volume is not None:
         ax_volume.tick_params(axis="both", which="major", labelsize=6)
@@ -323,6 +337,10 @@ def plot_candlestick(
                 bos_choch = calculate_bos_choch(ohlc, swings)
 
             draw_bos_choch(ax, bos_choch, ohlc)
+
+    # Draw liquidation heatmap
+    if is_draw_liquidation_heatmap and liquidation_heatmap_data is not None:
+        draw_liquidation_heatmap(ax, ohlc, liquidation_heatmap_data, dark_mode)
 
     # Save the chart
     last_timestamp = datetime.fromtimestamp(ohlc.index[-1].timestamp())
