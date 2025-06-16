@@ -25,6 +25,7 @@ from datetime import datetime
 import ccxt.async_support as ccxt
 import pandas as pd
 
+from meme_nexus.models import LiquidationHeatmapData
 from meme_nexus.utils.draw import plot_candlestick
 from meme_nexus.utils.indicators import calculate_all_indicators
 
@@ -83,13 +84,15 @@ async def main(timeframe_config: str = "2h", limit: int = 500):
             return
 
         with open(heatmap_file) as f:
-            heatmap_data = json.load(f)
+            raw_heatmap_data = json.load(f)
 
+        # Convert to structured model
+        heatmap_data = raw_heatmap_data["data"]["liqHeatMap"]
+        heatmap_data = LiquidationHeatmapData.from_api_response(heatmap_data)
         logger.info("Loaded liquidation heatmap data")
 
         # Extract time range from heatmap data for reference
-        liq_data = heatmap_data["data"]["liqHeatMap"]
-        chart_times = liq_data["chartTimeArray"]
+        chart_times = heatmap_data.chartTimeArray
         heatmap_start_time = chart_times[0] // 1000  # Convert milliseconds to seconds
         heatmap_end_time = chart_times[-1] // 1000
 
@@ -165,7 +168,7 @@ async def main(timeframe_config: str = "2h", limit: int = 500):
             is_draw_rainbow=True,  # Always disabled due to high data requirements
             # Liquidation heatmap
             is_draw_liquidation_heatmap=True,  # Enable heatmap overlay
-            liquidation_heatmap_data=heatmap_data,  # Pass heatmap data
+            liquidation_heatmap_data=heatmap_data,  # Pass structured heatmap data
             dark_mode=True,  # Switch back to dark mode first
             indicators=all_indicators,  # Use pre-calculated indicators
         )

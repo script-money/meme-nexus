@@ -15,6 +15,7 @@ import pandas as pd
 
 from PIL import Image
 
+from ...models import LiquidationHeatmapData
 from ..format import format_number, format_timeframe
 from ..indicators import (
     calculate_bos_choch,
@@ -59,7 +60,7 @@ def plot_candlestick(
     is_draw_volume=True,
     is_draw_last_price=True,
     is_draw_liquidation_heatmap=False,
-    liquidation_heatmap_data: dict | None = None,
+    liquidation_heatmap_data: LiquidationHeatmapData | dict | None = None,
     dark_mode=True,
     indicators: dict[str, Any] | None = None,
 ) -> tuple[str, str, str]:
@@ -340,7 +341,14 @@ def plot_candlestick(
 
     # Draw liquidation heatmap
     if is_draw_liquidation_heatmap and liquidation_heatmap_data is not None:
-        draw_liquidation_heatmap(ax, ohlc, liquidation_heatmap_data, dark_mode)
+        # Convert dict to LiquidationHeatmapData if needed (for backward compatibility)
+        if isinstance(liquidation_heatmap_data, dict):
+            heatmap_data = LiquidationHeatmapData.from_api_response(
+                liquidation_heatmap_data
+            )
+        else:
+            heatmap_data = liquidation_heatmap_data
+        draw_liquidation_heatmap(ax, ohlc, heatmap_data, dark_mode)
 
     # Save the chart
     last_timestamp = datetime.fromtimestamp(ohlc.index[-1].timestamp())
