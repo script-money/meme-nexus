@@ -12,7 +12,7 @@ Usage:
 Configuration:
     API key can be configured via .env file:
     COINANK_API_KEY=your_api_key_here
-    
+
     If no .env file is found, the script uses a default working API key.
 """
 

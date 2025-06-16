@@ -5,7 +5,7 @@ from meme_nexus.clients.geckoterminal import GeckoTerminalClient
 
 async def analyze_pool(pool):
     """Format and analyze single pool data"""
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"Pool Name: {pool.attributes.name}")
     if pool.relationships.network:
         print(f"Network: {pool.relationships.network.data.id}")

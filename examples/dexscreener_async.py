@@ -29,7 +29,7 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
 
         # Print basic information about each pair
         for pair in response.pairs:
-            print(f"\n{'='*50}")
+            print(f"\n{'=' * 50}")
             print(f"Token: {pair.baseToken.symbol} ({pair.chainId})")
             print(f"DEX: {pair.dexId}")
             print(f"Price: ${pair.priceUsd}")
@@ -55,7 +55,7 @@ async def print_token_info(client: DexScreenerClient, token_address: str) -> Non
                     for social in pair.info.socials:
                         print(f"  - {social.type}: {social.url}")
 
-            print(f"{'='*50}\n")
+            print(f"{'=' * 50}\n")
 
     except APIError as e:
         logger.error(f"API error fetching data for {token_address}: {e}")
