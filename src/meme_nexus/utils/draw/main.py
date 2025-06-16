@@ -28,7 +28,9 @@ from ..indicators import (
 )
 from .config import create_chart_style, get_color_scheme
 from .elements import (
+    configure_additional_chart_axes,
     create_swing_point_plots,
+    draw_additional_charts,
     draw_bos_choch,
     draw_fvg,
     draw_highs_lows,
@@ -63,9 +65,21 @@ def plot_candlestick(
     liquidation_heatmap_data: LiquidationHeatmapData | dict | None = None,
     dark_mode=True,
     indicators: dict[str, Any] | None = None,
+    additional_charts: list[dict[str, Any]] | None = None,
+    zero_line_separator: float | None = None,
 ) -> tuple[str, str, str]:
     """
-    Plot candlestick chart with various technical indicators.
+    Plot candlestick chart with various technical indicators and additional charts.
+
+    Args:
+        additional_charts: List of additional charts to display below main chart.
+                          Each dict should contain:
+                          - title: Chart title
+                          - series: Data series (list of values)
+                          - timestamps: Timestamps for data points
+                          - type: Chart type ("Line", "histogram", "Candle")
+        zero_line_separator: Value for positive/negative color separation.
+                           If set, values >= separator are green, < separator are red.
 
     Returns:
         tuple: (file_path, mime_type, base64_string)
@@ -181,6 +195,13 @@ def plot_candlestick(
             rainbow_plots = draw_rainbow_indicator(ohlc)
             addplots.extend(rainbow_plots)
 
+    # Handle additional charts
+    if additional_charts:
+        additional_addplots = draw_additional_charts(
+            additional_charts, ohlc, is_draw_volume, chart_type="ratio"
+        )
+        addplots.extend(additional_addplots)
+
     # Draw swing points
     dynamic_offset = None
     if is_draw_swingpoint:
@@ -191,7 +212,15 @@ def plot_candlestick(
 
     # Configure plot parameters
     plt.rcParams.update({"font.size": 8})
-    panel_ratios = (3, 1) if is_draw_volume else (1,)
+
+    # Calculate panel ratios based on volume and additional charts
+    panel_ratios = [4]  # Main chart - increased from 3 to 4
+    if is_draw_volume:
+        panel_ratios.append(1)  # Volume panel
+    if additional_charts:
+        # Compress order depth charts - use 0.6 instead of 1
+        panel_ratios.extend([0.6] * len(additional_charts))
+    panel_ratios = tuple(panel_ratios)
 
     # Create the main plot
     plot_kwargs = {
@@ -217,9 +246,20 @@ def plot_candlestick(
 
     fig, ax_all = mpf.plot(**plot_kwargs)
 
-    # Get axes
-    ax = ax_all[0]
-    ax_volume = ax_all[2] if is_draw_volume else None
+    # Get axes - mplfinance creates 2 axes per panel (left and right y-axis)
+    ax = ax_all[0]  # Main price chart
+    ax_volume = ax_all[2] if is_draw_volume else None  # Volume chart (skip right axis)
+
+    # Get additional chart axes - only take left y-axes (even indices)
+    additional_axes = []
+    if additional_charts:
+        # Skip main (0,1) and volume (2,3) if present
+        start_idx = 4 if is_draw_volume else 2
+        # Take every second axis (left y-axis only)
+        for i in range(len(additional_charts)):
+            axis_idx = start_idx + (i * 2)  # Skip right y-axes
+            if axis_idx < len(ax_all):
+                additional_axes.append(ax_all[axis_idx])
 
     # Set y-axis limits
     y_min = ohlc["low"].min()
@@ -242,6 +282,12 @@ def plot_candlestick(
             plt.FuncFormatter(lambda x, p: format_number(x))
         )
         ax_volume.set_ylabel("")
+
+    # Configure additional chart axes
+    if additional_charts and additional_axes:
+        configure_additional_chart_axes(
+            additional_charts, additional_axes, dark_mode, chart_type="ratio"
+        )
 
     # Add grid
     ax.grid(axis="x", linewidth=0.1, color=colors["light"])
