@@ -6,6 +6,7 @@ import pandas as pd
 
 from matplotlib.colors import LinearSegmentedColormap
 
+from ...models import LiquidationHeatmapData
 from ..format import format_number
 from .config import get_color_scheme
 
@@ -472,7 +473,7 @@ def draw_highs_lows(ax, ohlc: pd.DataFrame, dark_mode: bool):
 def draw_liquidation_heatmap(
     ax,
     ohlc: pd.DataFrame,
-    heatmap_data: dict,
+    heatmap_data: LiquidationHeatmapData,
     dark_mode: bool = True,
 ):
     """
@@ -499,20 +500,18 @@ def draw_liquidation_heatmap(
     Args:
         ax: Matplotlib axis to draw on
         ohlc: OHLC dataframe with datetime index, used for coordinate mapping
-        heatmap_data: Dict containing liquidation heatmap data from CoinAnk API
+        heatmap_data: LiquidationHeatmapData model containing liquidation heatmap data
         dark_mode: Whether to use dark mode color scheme (default: True)
-        alpha: Alpha transparency for heatmap overlay (default: 0.8)
 
     Example:
         The heatmap data can be fetched using:
         curl "https://api.coinank.com/api/liqMap/getLiqHeatMap?exchangeName=Binance&symbol=BTCUSDT&interval=1M"
     """
     # Extract heatmap components
-    liq_data = heatmap_data["data"]["liqHeatMap"]
-    heat_data = liq_data["data"]  # [[time_idx, price_idx, liq_value], ...]
-    chart_times = liq_data["chartTimeArray"]  # [timestamp1, timestamp2, ...]
-    price_array = liq_data["priceArray"]  # [price1, price2, ...]
-    max_liq_value = liq_data["maxLiqValue"]
+    heat_data = heatmap_data.data  # [[time_idx, price_idx, liq_value], ...]
+    chart_times = heatmap_data.chartTimeArray  # [timestamp1, timestamp2, ...]
+    price_array = heatmap_data.priceArray  # [price1, price2, ...]
+    max_liq_value = heatmap_data.maxLiqValue
 
     if not heat_data:
         return
@@ -634,7 +633,6 @@ def draw_liquidation_heatmap(
     x_coords = np.array(visible_chart_positions)
     # Y coordinates: prices
     y_coords = np.array(visible_prices)
-    print(len(x_coords), len(y_coords))
 
     # Create extent for imshow: [left, right, bottom, top]
     # Note: imshow expects extent as [x_min, x_max, y_min, y_max]
