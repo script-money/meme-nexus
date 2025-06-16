@@ -1,5 +1,6 @@
 """Individual chart element drawing functions."""
 
+import matplotlib.pyplot as plt
 import mplfinance as mpf
 import numpy as np
 import pandas as pd
@@ -468,6 +469,253 @@ def draw_highs_lows(ax, ohlc: pd.DataFrame, dark_mode: bool):
         linewidth=0.2,
         alpha=0.5,
     )
+
+
+def draw_additional_charts(
+    additional_charts: list[dict],
+    ohlc: pd.DataFrame,
+    is_draw_volume: bool,
+    chart_type: str = "ratio",
+) -> list:
+    """
+    Create addplots for additional charts (order depth, dominance charts, etc.).
+
+    Args:
+        additional_charts: List of chart configurations
+        ohlc: OHLC DataFrame to align data with
+        is_draw_volume: Whether volume panel is drawn
+        chart_type: Type of chart ("ratio" or other types)
+    """
+    addplots = []
+
+    for chart in additional_charts:
+        series = chart.get("series", [])
+        timestamps = chart.get("timestamps", [])
+
+        # Create DataFrame for the additional chart
+        chart_df = pd.DataFrame({"timestamp": timestamps, "value": series})
+
+        if not chart_df.empty:
+            # Convert timestamps to datetime index
+            chart_df["timestamp"] = pd.to_datetime(chart_df["timestamp"], unit="s")
+            chart_df = chart_df.set_index("timestamp")
+
+            # Reindex to match main OHLC data (keep NaN values as NaN)
+            chart_df = chart_df.reindex(ohlc.index)
+
+            # Apply filtering and styling based on chart type
+            chart_index = additional_charts.index(chart)
+            panel_idx = (1 if is_draw_volume else 0) + 1 + chart_index
+
+            if chart_type == "ratio":
+                # Ratio charts: filter out values between -1 and 1, use histogram
+                series = chart.get("series", [])
+                has_positive = any(
+                    val > 1 for val in series if val is not None and not np.isnan(val)
+                )
+                has_negative = any(
+                    val < -1 for val in series if val is not None and not np.isnan(val)
+                )
+
+                if has_positive and not has_negative:
+                    # Buy dominance chart - only show values > 1
+                    chart_df["value"] = chart_df["value"].where(
+                        chart_df["value"] > 1, np.nan
+                    )
+                    color = "green"
+                elif has_negative and not has_positive:
+                    # Sell dominance chart - only show values < -1
+                    chart_df["value"] = chart_df["value"].where(
+                        chart_df["value"] < -1, np.nan
+                    )
+                    color = "red"
+                else:
+                    # Mixed chart - filter both ranges
+                    chart_df["value"] = chart_df["value"].where(
+                        (chart_df["value"] > 1) | (chart_df["value"] < -1), np.nan
+                    )
+                    color = "steelblue"
+
+                addplots.append(
+                    mpf.make_addplot(
+                        chart_df["value"],
+                        type="bar",
+                        color=color,
+                        alpha=0.7,
+                        panel=panel_idx,
+                        ylabel="",
+                    )
+                )
+            else:
+                # Other chart types: use line chart with orange color
+                addplots.append(
+                    mpf.make_addplot(
+                        chart_df["value"],
+                        type="line",
+                        color="#ff8d00",  # Orange color for other types
+                        panel=panel_idx,
+                        ylabel="",
+                    )
+                )
+
+    return addplots
+
+
+def configure_additional_chart_axes(
+    additional_charts: list[dict],
+    additional_axes: list,
+    dark_mode: bool,
+    chart_type: str = "ratio",
+):
+    """
+    Configure Y-axis range and styling for additional charts.
+
+    Args:
+        additional_charts: List of chart configurations
+        additional_axes: List of matplotlib axes for additional charts
+        dark_mode: Whether to use dark mode styling
+        chart_type: Type of chart ("ratio" or other types)
+    """
+    colors = get_color_scheme()
+
+    for i, (chart, ax_additional) in enumerate(
+        zip(additional_charts, additional_axes, strict=True)
+    ):
+        ax_additional.tick_params(axis="both", which="major", labelsize=6)
+        ax_additional.yaxis.set_major_formatter(
+            plt.FuncFormatter(lambda x, p: format_number(x))
+        )
+        ax_additional.set_ylabel("")
+
+        if chart_type == "ratio":
+            # Configure Y-axis range for ratio charts (dominance charts)
+            series = chart.get("series", [])
+
+            # Check if this is buy or sell chart based on data
+            has_positive = any(
+                val > 1 for val in series if val is not None and not np.isnan(val)
+            )
+            has_negative = any(
+                val < -1 for val in series if val is not None and not np.isnan(val)
+            )
+
+            if has_positive and not has_negative:
+                # Buy dominance chart - dynamic range based on max value
+                valid_positives = [
+                    val
+                    for val in series
+                    if val is not None and not np.isnan(val) and val > 1
+                ]
+                if valid_positives:
+                    max_val = max(valid_positives)
+                    # Set upper limit with some padding
+                    if max_val <= 1.5:
+                        y_max = 1.6
+                        ticks = [1, 1.2, 1.4]
+                        labels = ["±1", "1.2", "1.4"]
+                    elif max_val <= 2.0:
+                        y_max = 2.1
+                        ticks = [1, 1.5, 2]
+                        labels = ["±1", "1.5", "2"]
+                    elif max_val <= 2.5:
+                        y_max = 2.6
+                        ticks = [1, 1.5, 2, 2.5]
+                        labels = ["±1", "1.5", "2", "2.5"]
+                    else:
+                        y_max = max_val + 0.2
+                        ticks = [1, 2, 3] if max_val > 2.5 else [1, 1.5, 2, 2.5]
+                        labels = (
+                            ["±1", "2", "3"]
+                            if max_val > 2.5
+                            else ["±1", "1.5", "2", "2.5"]
+                        )
+
+                    ax_additional.set_ylim(1, y_max)
+                    ax_additional.set_yticks(ticks)
+                    ax_additional.set_yticklabels(labels)
+
+            elif has_negative and not has_positive:
+                # Sell dominance chart - dynamic range based on min value
+                valid_negatives = [
+                    val
+                    for val in series
+                    if val is not None and not np.isnan(val) and val < -1
+                ]
+                if valid_negatives:
+                    min_val = min(valid_negatives)
+                    # Set lower limit with some padding
+                    if min_val >= -1.5:
+                        y_min = -1.6
+                        ticks = [-1.4, -1.2, -1]
+                        labels = ["-1.4", "-1.2", "±1"]
+                    elif min_val >= -2.0:
+                        y_min = -2.1
+                        ticks = [-2, -1.5, -1]
+                        labels = ["-2", "-1.5", "±1"]
+                    elif min_val >= -2.5:
+                        y_min = -2.6
+                        ticks = [-2.5, -2, -1.5, -1]
+                        labels = ["-2.5", "-2", "-1.5", "±1"]
+                    else:
+                        y_min = min_val - 0.2
+                        ticks = [-3, -2, -1] if min_val < -2.5 else [-2.5, -2, -1.5, -1]
+                        labels = (
+                            ["-3", "-2", "±1"]
+                            if min_val < -2.5
+                            else ["-2.5", "-2", "-1.5", "±1"]
+                        )
+
+                    ax_additional.set_ylim(y_min, -1)
+                    ax_additional.set_yticks(ticks)
+                    ax_additional.set_yticklabels(labels)
+
+            # Add title for additional chart (only for positive/buy charts)
+            if has_positive and not has_negative:
+                title = chart.get("title", f"Chart {i + 1}")
+                ax_additional.text(
+                    0.02,
+                    0.8,
+                    title,
+                    transform=ax_additional.transAxes,
+                    va="top",
+                    ha="left",
+                    fontsize=6,
+                    color=colors["white"] if dark_mode else colors["black"],
+                )
+
+            # Add zero line for reference (ratio charts)
+            ax_additional.axhline(
+                y=0, color=colors["light"], linestyle="--", linewidth=0.8, alpha=0.7
+            )
+
+        else:
+            # Configure other chart types with auto-scaling
+            series = chart.get("series", [])
+            valid_values = [
+                val for val in series if val is not None and not np.isnan(val)
+            ]
+
+            if valid_values:
+                # Auto-scale Y-axis for other chart types
+                min_val = min(valid_values)
+                max_val = max(valid_values)
+                value_range = max_val - min_val
+                padding = value_range * 0.1  # 10% padding
+
+                ax_additional.set_ylim(min_val - padding, max_val + padding)
+
+            # Add title for other chart types
+            title = chart.get("title", f"Chart {i + 1}")
+            ax_additional.text(
+                0.02,
+                0.8,
+                title,
+                transform=ax_additional.transAxes,
+                va="top",
+                ha="left",
+                fontsize=6,
+                color=colors["white"] if dark_mode else colors["black"],
+            )
 
 
 def draw_liquidation_heatmap(
