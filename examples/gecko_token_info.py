@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 async def analyze_token(token):
     """Format and analyze single token data"""
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"Token Name: {token.attributes.name} ({token.attributes.symbol})")
     print(f"Address: {token.attributes.address}")
     print(f"Decimals: {token.attributes.decimals}")
