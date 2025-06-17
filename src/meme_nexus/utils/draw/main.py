@@ -237,7 +237,7 @@ def plot_candlestick(
         "scale_padding": {"left": 0, "right": 0},
         "ylabel": "",
         "warn_too_much_data": 10000,
-        "volume": is_draw_volume,
+        "volume": False,
     }
 
     # Only add marketcolor_overrides if it's not None

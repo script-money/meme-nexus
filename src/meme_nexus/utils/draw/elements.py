@@ -22,7 +22,7 @@ def draw_volume(ohlc: pd.DataFrame) -> mpf.make_addplot:
     ]
 
     return mpf.make_addplot(
-        ohlc["volume"], type="bar", panel=1, color=bar_colors, alpha=0.75, width=0.8
+        ohlc["volume"], type="bar", panel=1, color=bar_colors, alpha=0.75, width=1.0
     )
 
 
